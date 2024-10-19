@@ -1,0 +1,17 @@
+APIs/*.txt
+
+images/*.jpg
+images/*.png
+
+user_tests/
+
+templateMaker/*.docx
+templateMaker/*.pptx
+templateMaker/*.pdf
+
+temp/*.mp4
+temp/*.mp3
+temp/*.jpg
+temp/*.png
+
+main_menu_sections/rewards/daily_gifts/
