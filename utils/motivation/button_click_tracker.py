@@ -93,10 +93,8 @@ async def send_motivational_message(
         username = user.username
         message = message.replace("(اسم المستخدم)", username)
         if isinstance(update, Update):
-            print("no")
             await update.message.reply_text(message)
         else:
-            print("yes")
             await update.message.reply_text(message)
     user_data["button_clicks"] = 0
 

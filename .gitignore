@@ -1,3 +1,5 @@
+venv/
+
 APIs/*.txt
 
 images/*.jpg

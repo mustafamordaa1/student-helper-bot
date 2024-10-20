@@ -5,11 +5,11 @@ API_PATH = "APIs"
 
 # Bot token
 BOT_TOKEN_PATH = os.path.join(API_PATH, "bot_token.txt")
-BOT_TOKEN = open(BOT_TOKEN_PATH, "r").readline()
+BOT_TOKEN = open(BOT_TOKEN_PATH, "r", encoding="UTF-8").readline()
 
 # OpenAI key
 OPENAI_API_PATH = os.path.join(API_PATH, "openai.txt")
-OPENAI_API_KEY = open(OPENAI_API_PATH, "r").readline()
+OPENAI_API_KEY = open(OPENAI_API_PATH, "r", encoding="UTF-8").readline()
 
 # Main files directory
 MAIN_FILES = "Main Files"
