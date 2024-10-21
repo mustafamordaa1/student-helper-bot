@@ -13,7 +13,7 @@ from telegram.ext import (
 )
 
 from openai import OpenAI
-from config import OPENAI_API_KEY
+from config import DESIGNS_POWER_POINT_FILES, OPENAI_API_KEY
 from main_menu_sections.design_for_you.helper_functions import (
     check_user_ai_limit,
     download_image,
@@ -143,12 +143,13 @@ async def handle_design_selection(update: Update, context):
     else:
         design_index = int(query.data.split("_")[1])
         selected_design = context.user_data["designs"][design_index]
+        design_path = os.path.join(DESIGNS_POWER_POINT_FILES, selected_design[1])
 
         try:
             await query.edit_message_text("جاري معالجة التصميم... ⚙️")
             image_path = await asyncio.to_thread(
                 process_powerpoint_design,
-                selected_design[1],
+                design_path,
                 update.effective_user.first_name,
             )
 

@@ -11,6 +11,11 @@ from telegram.ext import (
 from telegram.error import TimedOut
 
 from AIModels.chatgpt import get_chatgpt_instance
+from config import (
+    GENERAL_ADVICE_FILE,
+    SOLUTION_STRATEGIES_FILE,
+    TIPS_AND_STRATEGIES_CONTENT,
+)
 from handlers.personal_assistant_chat_handler import SYSTEM_MESSAGE
 from utils.subscription_management import check_subscription
 from .keyboards import (
@@ -24,10 +29,6 @@ from .keyboards import (
 from .excel_handler import ExcelHandler
 from .general_advice_model import GeneralAdviceModel
 from .solution_strategies_model import SolutionStrategiesModel
-from .constants import (
-    GENERAL_ADVICE_FILE,
-    SOLUTION_STRATEGIES_FILE,
-)
 
 
 async def handle_tips_and_strategies(update: Update, context: CallbackContext):
@@ -164,8 +165,7 @@ async def handle_solution_format(update: Update, context: CallbackContext) -> No
         sheet_name, question_index, file_format
     )
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(script_dir, file_path)
+    file_path = os.path.join(TIPS_AND_STRATEGIES_CONTENT, file_path)
 
     if os.path.exists(file_path):
         await query.message.reply_text(
@@ -215,7 +215,7 @@ async def handle_request_specific_tips(update: Update, context: CallbackContext)
     await update.callback_query.edit_message_text(
         f"مرحبا {user.first_name}! 👋 أنا هنا لتقديم النصائح خاصة لك. كيف يمكنني مساعدتك اليوم؟"
     )
-    messages = chatgpt.get_chat_history(user.id)
+    messages = await chatgpt.get_chat_history(user.id)
     context.user_data["messages"] = messages
     return CHATTING
 
@@ -252,7 +252,6 @@ TIPS_AND_STRATEGIES_HANDLERS = {
     "tips_and_strategies": handle_tips_and_strategies,
     "handle_general_tips": handle_general_advice,
     "handle_solving_strategies": handle_solution_strategies,
-    # "handle_request_specific_tips": handle_request_specific_tips,
 }
 
 TIPS_AND_STRATEGIES_HANDLERS_PATTER = {

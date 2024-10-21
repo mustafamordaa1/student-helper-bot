@@ -32,7 +32,6 @@ from main_menu_sections.statistics.statistics_handler import STATISTICS_HANDLERS
 from main_menu_sections.help_and_settings.help_and_settings_handler import (
     HELP_AND_SETTINGS_HANDLERS,
     HELP_AND_SETTINGS_HANDLERS_PATTERN,
-    # reminder_handler,
 )
 from main_menu_sections.subscription.subscription_handler import (
     SUBSCRIPTION_HANDLERS,

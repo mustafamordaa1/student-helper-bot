@@ -25,8 +25,7 @@ def load_design_options(gender: str):
         workbook = openpyxl.load_workbook(FILE_GENDER)
         sheet = workbook.active
         return [
-            (row[0].value, row[1].value)
-            for row in sheet.iter_rows(min_row=2, values_only=True)
+            (row[0], row[1]) for row in sheet.iter_rows(min_row=2, values_only=True)
         ]
     except Exception as e:
         logger.error(f"Error loading design options: {e}")
@@ -58,9 +57,15 @@ def convert_ppt_to_image(ppt_file_path, image_file_path):
     try:
         prs = Presentation(ppt_file_path)
         slide = prs.slides[0]
-        image_data = io.BytesIO()
-        slide.save_png(image_data)
-        image = Image.open(image_data)
+
+        # Extract shapes from the slide
+        shapes = slide.shapes
+        # Create a blank white image
+        image = Image.new("RGB", (1920, 1080), "white")
+        for shape in shapes:
+            if shape.shape_type == 13:  # 13 is the type for Pictures
+                image.paste(shape.image, (shape.left, shape.top))
+
         image.save(image_file_path)
     except Exception as e:
         logger.error(f"Error converting PPT to image: {e}")

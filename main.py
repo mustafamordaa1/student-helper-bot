@@ -52,7 +52,7 @@ def main() -> None:
     application = (
         Application.builder()
         .token(BOT_TOKEN)
-        # .concurrent_updates(True)
+        .concurrent_updates(True)
         .request(request)
         .post_init(set_persistent_menu)
         .build()

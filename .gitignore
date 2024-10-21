@@ -11,9 +11,6 @@ templateMaker/*.docx
 templateMaker/*.pptx
 templateMaker/*.pdf
 
-temp/*.mp4
-temp/*.mp3
-temp/*.jpg
-temp/*.png
+temp/
 
-main_menu_sections/rewards/daily_gifts/
+Main Files/Rewards Files/daily_gifts/

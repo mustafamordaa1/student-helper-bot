@@ -375,7 +375,8 @@ async def end_quiz(update: Update, context: CallbackContext):
         await update.effective_message.reply_text("لقد انتهى وقتك. ⏱️")
 
     message = await update.effective_message.edit_text(
-        "انتظر قليلا حتى يتم تحليل الاجابتات التي قمت بأختيارها... ⏳"
+        "انتظر قليلا حتى يتم تحليل الاجابتات التي قمت بأختيارها... ⏳",
+        parse_mode="Markdown",
     )
 
     update_user_usage_time(user_id, total_time)

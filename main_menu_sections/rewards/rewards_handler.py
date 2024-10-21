@@ -11,6 +11,7 @@ from telegram.ext import CallbackContext
 import openpyxl
 import logging
 
+from config import REWARDS_DAILY_GIFTS, REWARDS_EXCEL
 from utils.database import execute_query, get_data
 from utils.subscription_management import check_subscription
 
@@ -45,12 +46,12 @@ async def handle_daily_reward(update: Update, context: CallbackContext):
     """Handles the 'هديتك اليومية' sub-option."""
     await update.callback_query.answer()  # Acknowledge callback interaction
 
-    user_id = update.effective_user.id
-    if await has_user_claimed_daily_reward(user_id):
-        await update.callback_query.message.reply_text(
-            "لقد استلمت هديتك اليومية بالفعل! 🎉"
-        )
-        return
+    # user_id = update.effective_user.id
+    # if await has_user_claimed_daily_reward(user_id):
+    #     await update.callback_query.message.reply_text(
+    #         "لقد استلمت هديتك اليومية بالفعل! 🎉"
+    #     )
+    #     return
 
     await update.callback_query.message.reply_text("جاري إعداد هديتك اليومية... 🎁")
 
@@ -58,12 +59,10 @@ async def handle_daily_reward(update: Update, context: CallbackContext):
     current_day = datetime.now().day
 
     # Construct the folder path for the daily reward
-    folder_path = os.path.join(
-        os.path.dirname(__file__), f"daily_gifts/day_{current_day}/"
-    )
+    folder_path = os.path.join(REWARDS_DAILY_GIFTS, f"day_{current_day}/")
 
     # Create the 'daily_gifts' folder structure if it doesn't exist (only once)
-    daily_gifts_path = os.path.join(os.path.dirname(__file__), "daily_gifts")
+    daily_gifts_path = REWARDS_DAILY_GIFTS
     if not os.path.exists(daily_gifts_path):
         create_daily_gifts_folders(daily_gifts_path)
 
@@ -211,9 +210,7 @@ async def generate_reward_messages(user_stats):
     reward_messages = []
 
     try:
-        workbook = openpyxl.load_workbook(
-            os.path.join(os.path.dirname(__file__), "rewards.xlsx")
-        )
+        workbook = openpyxl.load_workbook(REWARDS_EXCEL)
         rewards_sheet = workbook.active
 
         # Get target and reward text from the SECOND row (index 1)

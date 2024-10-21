@@ -3,16 +3,16 @@ import random
 from openpyxl import load_workbook
 from telegram import Update
 from telegram.ext import CallbackContext
+from config import (
+    FEMALE_GO_BACK_MESSAGES_FILE,
+    FEMALE_MAIN_MENUMESSAGES_FILE,
+    MALE_GO_BACK_MESSAGES_FILE,
+    MALE_MAIN_MENU_MESSAGES_FILE,
+)
 from utils.database import get_data
 
 # Constants for paths and message frequency
-MOTIVATIONAL_MESSAGES_PATH = os.path.dirname(os.path.abspath(__file__))
-MALE_MAIN_MENU_MESSAGES_FILE = "main_menu/Male Sructure.xlsx"
-FEMALE_MAIN_MENUMESSAGES_FILE = "main_menu/Female Sructure.xlsx"
-
-MALE_GO_BACK__MESSAGES_FILE = "go_back/Male Sructure.xlsx"
-FEMALE_GO_BACK_MESSAGES_FILE = "go_back/Female Sructure.xlsx"
-MESSAGES_TRIGGER_THRESHOLD = 2
+MESSAGES_TRIGGER_THRESHOLD = 3
 
 # Global dictionary to store messages (loaded on bot startup)
 motivational_messages = {
@@ -32,32 +32,18 @@ def load_motivational_messages():
             messages.append(row[0])  # Messages are in the first column
         return messages
 
-    male_main_filepath = os.path.join(
-        MOTIVATIONAL_MESSAGES_PATH, MALE_MAIN_MENU_MESSAGES_FILE
-    )
-    female_main_filepath = os.path.join(
-        MOTIVATIONAL_MESSAGES_PATH, FEMALE_MAIN_MENUMESSAGES_FILE
-    )
-
-    male_back_filepath = os.path.join(
-        MOTIVATIONAL_MESSAGES_PATH, MALE_GO_BACK__MESSAGES_FILE
-    )
-    female_back_filepath = os.path.join(
-        MOTIVATIONAL_MESSAGES_PATH, FEMALE_GO_BACK_MESSAGES_FILE
-    )
-
     motivational_messages["main_menu"]["male"] = load_messages_from_file(
-        male_main_filepath
+        MALE_MAIN_MENU_MESSAGES_FILE
     )
     motivational_messages["main_menu"]["female"] = load_messages_from_file(
-        female_main_filepath
+        FEMALE_MAIN_MENUMESSAGES_FILE
     )
 
     motivational_messages["go_back"]["male"] = load_messages_from_file(
-        male_back_filepath
+        MALE_GO_BACK_MESSAGES_FILE
     )
     motivational_messages["go_back"]["female"] = load_messages_from_file(
-        female_back_filepath
+        FEMALE_GO_BACK_MESSAGES_FILE
     )
 
 

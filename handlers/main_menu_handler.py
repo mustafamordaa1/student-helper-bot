@@ -11,21 +11,24 @@ async def main_menu_handler(update_or_query, context: CallbackContext):
     """Handles the /main_menu command and displays the main menu."""
     context.user_data["current_section"] = None
 
-    # Get user_id correctly based on the type of update_or_query
-    if isinstance(update_or_query, Update):
-        user_id = update_or_query.effective_user.id
-    else:  # Assuming it's a CallbackQuery
-        user_id = update_or_query.from_user.id
+    ## FUTUER: Enabling the subscription
 
-    subscription_data = get_data(
-        "SELECT subscription_end_time FROM users WHERE telegram_id = ?", (user_id,)
-    )
-    if (
-        subscription_data
-        and subscription_data[0][0] is not None
-        and datetime.strptime(subscription_data[0][0], "%Y-%m-%d %H:%M:%S")
-        > datetime.now()
-    ):
+    # Get user_id correctly based on the type of update_or_query
+    # if isinstance(update_or_query, Update):
+    #     user_id = update_or_query.effective_user.id
+    # else:  # Assuming it's a CallbackQuery
+    #     user_id = update_or_query.from_user.id
+
+    # subscription_data = get_data(
+    #     "SELECT subscription_end_time FROM users WHERE telegram_id = ?", (user_id,)
+    # )
+    # if (
+    #     subscription_data
+    #     and subscription_data[0][0] is not None
+    #     and datetime.strptime(subscription_data[0][0], "%Y-%m-%d %H:%M:%S")
+    #     > datetime.now()
+    # ):
+    if True:
         # Subscription is active
         keyboard = [
             [
@@ -52,7 +55,7 @@ async def main_menu_handler(update_or_query, context: CallbackContext):
             [InlineKeyboardButton("الإحصائيات 📊", callback_data="statistics")],
             [InlineKeyboardButton("خلينا نصمملك 🎨", callback_data="design_for_you")],
             [InlineKeyboardButton("المكافآت 🎁", callback_data="rewards")],
-            [InlineKeyboardButton("الاشتراك 🔄", callback_data="subscription")],
+            # [InlineKeyboardButton("الاشتراك 🔄", callback_data="subscription")],
             [
                 InlineKeyboardButton(
                     "المساعدة والإعدادات ⚙️", callback_data="help_and_settings"
