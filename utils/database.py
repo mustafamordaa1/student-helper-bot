@@ -65,7 +65,17 @@ async def create_tables(update: Update, context: CallbackContext):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             usage_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            FOREIGN KEY (user_id) REFERENCES users(telegram_id) ON DELETE CASCADE
+        );
+    """
+    )
+    # ChatGPT usage Table
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chatgpt_usage (
+            user_id INTEGER PRIMARY KEY,
+            usage_count INTEGER DEFAULT 0,
+            last_used TEXT  -- Store the date of last usage (YYYY-MM-DD format)
         );
     """
     )

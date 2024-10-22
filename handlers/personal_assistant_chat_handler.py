@@ -47,6 +47,9 @@ async def chat(update: Update, context: CallbackContext) -> int:
         system_message=SYSTEM_MESSAGE,
     )
 
+    if assistant_response == -1:
+        return ConversationHandler.END
+
     if assistant_response:
         return CHATTING
     else:
@@ -82,9 +85,7 @@ async def confirm_clear_history(update: Update, context: CallbackContext) -> int
         user_id = update.effective_user.id
         await chatgpt.clear_user_history(user_id)
         context.user_data["messages"] = [{"role": "system", "content": SYSTEM_MESSAGE}]
-        await update.message.reply_text(
-            "تم مسح سجل الدردشة الخاص بك."
-        )
+        await update.message.reply_text("تم مسح سجل الدردشة الخاص بك.")
         await update.message.reply_text(
             "هل تريد بدء محادثة جديدة؟",
             reply_markup=ReplyKeyboardMarkup(

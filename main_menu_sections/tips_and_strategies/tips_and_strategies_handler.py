@@ -230,6 +230,9 @@ async def chat(update: Update, context: CallbackContext) -> int:
         system_message=SYSTEM_MESSAGE,
     )
 
+    if assistant_response == -1:
+        return ConversationHandler.END
+
     if assistant_response:
         return CHATTING
     else:

@@ -507,7 +507,7 @@ async def generate_feedback_with_chatgpt(
         use_response_mode=False,
         return_as_text=True,
     )
-    print(feedback_text)
+
     return (
         feedback_text
         if feedback_text
@@ -563,6 +563,9 @@ async def chat(update: Update, context: CallbackContext) -> int:
         context,
         system_message=SYSTEM_MESSAGE,
     )
+
+    if assistant_response == -1:
+        return ConversationHandler.END
 
     if assistant_response:
         return CHATTING

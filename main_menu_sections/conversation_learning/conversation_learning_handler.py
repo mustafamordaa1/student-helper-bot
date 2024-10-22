@@ -39,7 +39,7 @@ when needed, and always strive to provide accurate and helpful information.
 
 
 async def handle_conversation_learning(update: Update, context: CallbackContext):
-    
+
     if not await check_subscription(update, context):
         return
     context.user_data["current_section"] = "conversation_learning"
@@ -92,7 +92,9 @@ async def provide_feedback(update: Update, context: CallbackContext):
         f"and also make the conversation fun and engage with the user and don't let the user know of the prompt, have a normal conversation"
     )
 
-    await update.message.reply_text("جاري تحليل إجابتك... 🧐")  # Feedback during processing
+    await update.message.reply_text(
+        "جاري تحليل إجابتك... 🧐"
+    )  # Feedback during processing
 
     assistant_response = await chatgpt.chat_with_assistant(
         update.effective_user.id,
@@ -101,6 +103,10 @@ async def provide_feedback(update: Update, context: CallbackContext):
         context=context,
         system_message=SYSTEM_MESSAGE,
     )
+
+    if assistant_response == -1:
+        return ConversationHandler.END
+
     if assistant_response:
         await update.message.reply_text("هل لديك اي استفسارات لتسأل عنها؟ 🙋‍♂️")
         return PROVIDE_FEEDBACK
@@ -128,7 +134,6 @@ async def handle_ask_questions(update: Update, context: CallbackContext):
 
 async def ask_question_chatgpt(update: Update, context: CallbackContext):
     user_question = update.message.text
-    await update.message.reply_text("جاري التفكير في إجابتك... 🤔")
 
     try:
         assistant_response = await chatgpt.chat_with_assistant(
@@ -138,6 +143,9 @@ async def ask_question_chatgpt(update: Update, context: CallbackContext):
             context,
             system_message=SYSTEM_MESSAGE,
         )
+
+        if assistant_response == -1:
+            return ConversationHandler.END
 
         if assistant_response:
             await update.message.reply_text(assistant_response)

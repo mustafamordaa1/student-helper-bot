@@ -1,9 +1,10 @@
 import asyncio
+from datetime import datetime
 import json
 import os
 from typing import List, Dict, Optional
 from telegram import Update
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, ConversationHandler
 from openai import OpenAI
 from AIModels.tts import generate_tts
 from config import OPENAI_API_KEY
@@ -11,6 +12,10 @@ from utils.database import execute_query, get_data
 from utils.user_management import get_user_setting
 
 client = OpenAI(api_key=OPENAI_API_KEY)
+
+# Constants for subscription tiers (Example - adapt as needed)
+FREE_TIER_LIMIT = 10
+PAID_TIER_LIMIT = 20
 
 
 class ChatGPT:
@@ -45,6 +50,13 @@ class ChatGPT:
         Returns:
             The assistant's response (text or audio file path), or None if an error occurred.
         """
+        if not return_as_text:
+            if not await self.check_usage_limit(user_id):
+                await update.message.reply_text(
+                    f"لقد وصلت إلى الحد اليومي لاستخدام ChatGPT. انتظر للغد حتى تتجدد استخدامك اليومي. حيث عدد المحدود اليومي حاليا هو {FREE_TIER_LIMIT}"
+                )
+                return ConversationHandler.END  # Or an appropriate state
+
         messages = []
         if context:
             messages = context.user_data.get("messages", [])
@@ -57,7 +69,7 @@ class ChatGPT:
             message = None
             if not return_as_text:
                 message = await update.message.reply_text("جارٍ التفكير في رد... 🤔")
-
+            print(messages)
             assistant_response = await self.generate_response(messages, **kwargs)
 
             if return_as_text:
@@ -78,6 +90,11 @@ class ChatGPT:
                 await _voice_response_processor(assistant_response, message)
             else:
                 await _written_response_processor(assistant_response, message)
+
+            await self.increment_usage(
+                user_id
+            )  # Increment usage AFTER successful response
+
             return True
         except Exception as e:
             print(f"Error calling OpenAI API: {e}")
@@ -96,6 +113,63 @@ class ChatGPT:
         except Exception as e:
             print(f"Error calling generate_response: {e}")
             return None
+
+    async def check_usage_limit(self, user_id: int) -> bool:
+        """Checks if the user has reached their daily ChatGPT usage limit."""
+        today = datetime.now().date()
+        usage_data = get_data(
+            "SELECT usage_count, last_used FROM chatgpt_usage WHERE user_id = ?",
+            (user_id,),
+        )
+
+        if usage_data:
+            usage_count, last_used_str = usage_data[0]
+            last_used = datetime.strptime(last_used_str, "%Y-%m-%d").date()
+            if last_used == today:
+                # limit = (
+                #     PAID_TIER_LIMIT
+                #     if await self.is_subscribed(user_id)
+                #     else FREE_TIER_LIMIT
+                # )  # Check subscription status
+                limit = FREE_TIER_LIMIT
+                return usage_count < limit
+            else:  # Reset count if it's a new day
+                await self.reset_daily_usage(user_id)
+                return True  # Allow usage as it's reset
+        else:  # No usage data yet, create new entry and allow
+            execute_query(
+                "INSERT INTO chatgpt_usage (user_id, usage_count, last_used) VALUES (?, ?, ?)",
+                (user_id, 0, today.strftime("%Y-%m-%d")),
+            )
+            return True
+
+    async def increment_usage(self, user_id: int):
+        """Increments the user's ChatGPT usage count."""
+        today = datetime.now().date()
+        execute_query(
+            "UPDATE chatgpt_usage SET usage_count = usage_count + 1, last_used = ? WHERE user_id = ?",
+            (today.strftime("%Y-%m-%d"), user_id),
+        )
+
+    async def reset_daily_usage(self, user_id: int):
+        """Resets the user's daily usage count."""
+        today = datetime.now().date()
+        execute_query(
+            "UPDATE chatgpt_usage SET usage_count = 0, last_used = ? WHERE user_id = ?",
+            (today.strftime("%Y-%m-%d"), user_id),
+        )
+
+    async def is_subscribed(self, user_id: int) -> bool:
+        """Checks if the user has an active subscription."""
+        subscription_end_time_str = await get_user_setting(
+            user_id, "subscription_end_time"
+        )
+        if subscription_end_time_str:
+            subscription_end_time = datetime.strptime(
+                subscription_end_time_str, "%Y-%m-%d %H:%M:%S.%f"
+            )
+            return subscription_end_time > datetime.now()
+        return False
 
     @staticmethod
     async def get_chat_history(

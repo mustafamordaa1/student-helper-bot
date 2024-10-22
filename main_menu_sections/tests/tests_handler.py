@@ -82,6 +82,7 @@ async def handle_start_new_test(update: Update, context: CallbackContext):
     )
     return CHOOSE_QUIZ_TYPE  # Start at the quiz type selection state
 
+
 async def handle_quiz_type_choice(update: Update, context: CallbackContext):
     """Handles the user's choice of quiz type."""
     query = update.callback_query
@@ -91,12 +92,20 @@ async def handle_quiz_type_choice(update: Update, context: CallbackContext):
 
     keyboard = []
     if quiz_type == "quantitative":  # Only show subcategories for Quantitative
-        keyboard.append([InlineKeyboardButton("التصنيف الرئيسي 🗂️", callback_data="main_category")])
-        keyboard.append([InlineKeyboardButton("التصنيف الفرعي 🗂️", callback_data="sub_category")])
+        keyboard.append(
+            [InlineKeyboardButton("التصنيف الرئيسي 🗂️", callback_data="main_category")]
+        )
+        keyboard.append(
+            [InlineKeyboardButton("التصنيف الفرعي 🗂️", callback_data="sub_category")]
+        )
     else:  # Assume "verbal"
-        keyboard.append([InlineKeyboardButton("التصنيف الرئيسي 🗂️", callback_data="main_category")])  # Only Main Category
+        keyboard.append(
+            [InlineKeyboardButton("التصنيف الرئيسي 🗂️", callback_data="main_category")]
+        )  # Only Main Category
 
-    keyboard.append([InlineKeyboardButton("الرجوع للخلف 🔙", callback_data="handle_start_new_test")])
+    keyboard.append(
+        [InlineKeyboardButton("الرجوع للخلف 🔙", callback_data="handle_start_new_test")]
+    )
     await update.callback_query.edit_message_text(
         "اختر نوع التصنيف: 🧐", reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -131,7 +140,7 @@ async def handle_show_main_categories(
     # total_categories = database.get_data("SELECT COUNT(*) FROM main_categories")[0][0]
     # total_pages = (total_categories + CATEGORIES_PER_PAGE - 1) // CATEGORIES_PER_PAGE
 
-    quiz_type = context.user_data.get("quiz_type", "quantitative") 
+    quiz_type = context.user_data.get("quiz_type", "quantitative")
 
     # Use a single query with a JOIN to directly get main category names
     main_categories = database.get_data(
@@ -185,7 +194,14 @@ async def handle_show_main_categories(
     if pagination_buttons:
         keyboard.append(pagination_buttons)
 
-    keyboard.append([InlineKeyboardButton("الرجوع للخلف 🔙", callback_data=f"quiz_type:{context.user_data.get('quiz_type', 'quantitative')}")])
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "الرجوع للخلف 🔙",
+                callback_data=f"quiz_type:{context.user_data.get('quiz_type', 'quantitative')}",
+            )
+        ]
+    )
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
@@ -240,7 +256,14 @@ async def handle_show_subcategories(
     if pagination_buttons:
         keyboard.append(pagination_buttons)
 
-    keyboard.append([InlineKeyboardButton("الرجوع للخلف 🔙", callback_data=f"quiz_type:{context.user_data.get('quiz_type', 'quantitative')}")])
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "الرجوع للخلف 🔙",
+                callback_data=f"quiz_type:{context.user_data.get('quiz_type', 'quantitative')}",
+            )
+        ]
+    )
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
@@ -674,6 +697,9 @@ async def chat(update: Update, context: CallbackContext) -> int:
         system_message=SYSTEM_MESSAGE,
     )
 
+    if assistant_response == -1:
+        return ConversationHandler.END
+
     if assistant_response:
         return CHATTING
     else:
@@ -813,8 +839,12 @@ TESTS_HANDLERS = {
 
 TESTS_HANDLERS_PATTERN = {
     r"^download_pdf:.+$": download_test_pdf,
-    r"^main_category_page:\d+$": lambda update, context: handle_show_main_categories(update, context, int(update.callback_query.data.split(":")[1])),  # Pagination handler
-    r"^subcategory_page:\d+$": lambda update, context: handle_show_subcategories(update, context, int(update.callback_query.data.split(":")[1])),  # Pagination handler
+    r"^main_category_page:\d+$": lambda update, context: handle_show_main_categories(
+        update, context, int(update.callback_query.data.split(":")[1])
+    ),  # Pagination handler
+    r"^subcategory_page:\d+$": lambda update, context: handle_show_subcategories(
+        update, context, int(update.callback_query.data.split(":")[1])
+    ),  # Pagination handler
 }
 
 
@@ -837,9 +867,7 @@ tests_conv_handler = ConversationHandler(
     ],
     states={
         CHOOSE_QUIZ_TYPE: [
-            CallbackQueryHandler(
-                handle_quiz_type_choice, pattern=r"^quiz_type:.+$"
-            )
+            CallbackQueryHandler(handle_quiz_type_choice, pattern=r"^quiz_type:.+$")
         ],
         CHOOSE_CATEGORY_TYPE: [
             CallbackQueryHandler(
