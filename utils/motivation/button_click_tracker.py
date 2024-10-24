@@ -76,7 +76,7 @@ async def send_motivational_message(
     message = get_random_motivational_message(gender, called_from)
     if message:
         # username = user.username
-        username = user_management.get_user_name(user_id)
+        username = await user_management.get_user_name(user_id)
         message = message.replace("(اسم المستخدم)", username)
         if isinstance(update, Update):
             await update.message.reply_text(message)
