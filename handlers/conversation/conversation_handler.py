@@ -204,10 +204,10 @@ async def handle_preference_selection(update: Update, context: CallbackContext) 
             (subscription_end_time, "تجربة مجانية الساعية", update.effective_user.id),
         )
 
-        await update.effective_message.reply_text(
-            "تم اعطائك ساعة مجانا لتجربني مجانا. يمكنك التجريب كما تشاء.\n"
-            "ويمكنك تمديد الاشتراك بتجربة مجانية من خلال زر الاشتراك في القائمة الرئيسية."
-        )
+        # await update.effective_message.reply_text(
+        #     "تم اعطائك ساعة مجانا لتجربني مجانا. يمكنك التجريب كما تشاء.\n"
+        #     "ويمكنك تمديد الاشتراك بتجربة مجانية من خلال زر الاشتراك في القائمة الرئيسية."
+        # )
 
         await query.answer()
         selected_preference = query.data.lower()
