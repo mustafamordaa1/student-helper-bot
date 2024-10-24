@@ -48,7 +48,7 @@ def get_user_data(user_id: int) -> dict:
         return {}
 
 
-async def save_user_data(user_data, context):
+async def save_user_data(user_data, context, user_id):
     """Saves user data to the SQLite database."""
     referral_code = await generate_referral_code()
 
@@ -66,6 +66,12 @@ async def save_user_data(user_data, context):
             user_data.username,
             user_data.id,
         ),
+    )
+    user_name, preferred_method, _ = await get_user_for_reminder(user_id)
+
+    # Update scheduler
+    await context.application.reminder_manager.schedule_user_reminders(
+        user_id, user_name, 1, preferred_method
     )
 
 
@@ -106,7 +112,6 @@ def update_user_points(user_id, points_earned):
         "UPDATE users SET points = points + ? WHERE telegram_id = ?",
         (points_earned, user_id),
     )
-
 
 
 def calculate_percentage_expected(score, total_questions):
@@ -165,6 +170,7 @@ def update_user_created_questions(user_id, num_questions_created):
         (num_questions_created, user_id),
     )
 
+
 async def get_user_setting(user_id, setting_name):
     """Retrieves a specific setting for a user."""
     query = f"SELECT {setting_name} FROM users WHERE telegram_id = ?"
@@ -172,26 +178,52 @@ async def get_user_setting(user_id, setting_name):
     return result[0][0] if result else None  # Return the setting value or None
 
 
+async def get_user_reminder_times_per_week(user_id):
+    """Retrieves a specific setting for a user."""
+    query = f"SELECT reminder_times_per_week FROM users WHERE telegram_id = ?"
+    result = database.get_data(query, (user_id,))
+    return result[0][0] if result else None  # Return the setting value or None
+
+
+async def get_user_name(user_id):
+    """Retrieves a specific setting for a user."""
+    query = f"SELECT name FROM users WHERE telegram_id = ?"
+    result = database.get_data(query, (user_id,))
+    return result[0][0] if result else None  # Return the setting value or None
+
+
+async def get_user_for_reminder(user_id):
+    """Retrieves a specific setting for a user."""
+    query = f"SELECT name, voice_written, reminder_times_per_week FROM users WHERE telegram_id = ?"
+    result = database.get_data(query, (user_id,))
+    user_name = result[0][0]
+    preferred_method = "written"
+    frequency = result[0][2]
+    return user_name, preferred_method, frequency
+
+
 async def update_user_setting(user_id, setting_name, new_value):
     """Updates a specific setting for a user."""
     query = f"UPDATE users SET {setting_name} = ? WHERE telegram_id = ?"
     database.execute_query(query, (new_value, user_id))
+
 
 async def update_reminder_frequency(user_id, frequency):
     """Updates the user's reminder frequency in the database."""
     query = "UPDATE users SET reminder_times_per_week = ? WHERE telegram_id = ?"
     database.execute_query(query, (frequency, user_id))
 
+
 async def get_reminder_frequency(user_id):
     """Gets the user's reminder frequency from the database."""
     query = "SELECT reminder_times_per_week FROM users WHERE telegram_id = ?"
     result = database.get_data(query, (user_id,))
-    return result[0][0] if result else 0 # Return 0 if no frequency is set
+    return result[0][0] if result else 0  # Return 0 if no frequency is set
 
 
 async def get_all_users_with_reminders():
     """Retrieves all users from the database who have a reminder frequency greater than 0."""
     # query = "SELECT * FROM users WHERE reminder_times_per_week > 0"
-    query = "SELECT telegram_id, telegram_username, reminder_times_per_week, voice_written FROM users WHERE reminder_times_per_week > 0"
+    query = "SELECT telegram_id, name, reminder_times_per_week, voice_written FROM users WHERE reminder_times_per_week > 0"
     result = database.get_data(query)
     return result

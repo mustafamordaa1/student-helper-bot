@@ -69,7 +69,7 @@ class ChatGPT:
             message = None
             if not return_as_text:
                 message = await update.message.reply_text("جارٍ التفكير في رد... 🤔")
-            print(messages)
+
             assistant_response = await self.generate_response(messages, **kwargs)
 
             if return_as_text:

@@ -40,7 +40,7 @@ async def create_tables(update: Update, context: CallbackContext):
             gender TEXT,
             subscription_end_time TEXT,
             type_of_last_subscription TEXT,
-            reminder_times_per_week INTEGER DEFAULT 0,
+            reminder_times_per_week INTEGER DEFAULT 1,
             percentage_expected INTEGER DEFAULT 0,
             usage_time TEXT,
             number_of_daily_gifts_used INTEGER DEFAULT 0,
@@ -53,7 +53,7 @@ async def create_tables(update: Update, context: CallbackContext):
             telegram_id INTEGER,
             personal_photo_link TEXT,
             telegram_bio TEXT,
-            notifications_enabled BOOLEAN DEFAULT FALSE
+            notifications_enabled BOOLEAN DEFAULT TRUE
         )
     """
     )

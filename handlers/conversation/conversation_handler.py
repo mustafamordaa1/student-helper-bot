@@ -192,13 +192,13 @@ async def handle_preference_selection(update: Update, context: CallbackContext) 
             )
     else:
         query = update.callback_query
-        await save_user_data(user_data, context)
+        await save_user_data(user_data, context, user_data.id)
         # await update.effective_message.reply_text("قد تم حفظ بياناتك.")
 
-         # Grant the user a free one-hour trial
-        subscription_end_time = (
-            datetime.now() + timedelta(hours=1)
-        ).strftime("%Y-%m-%d %H:%M:%S")
+        # Grant the user a free one-hour trial
+        subscription_end_time = (datetime.now() + timedelta(hours=1)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         execute_query(
             "UPDATE users SET subscription_end_time = ? ,type_of_last_subscription = ? WHERE telegram_id = ?",
             (subscription_end_time, "تجربة مجانية الساعية", update.effective_user.id),

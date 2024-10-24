@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from telegram import BotCommand
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler
@@ -43,7 +44,7 @@ async def set_persistent_menu(application):
     await application.bot.set_my_commands(commands)
 
 
-def main() -> None:
+def main():  # Main is now a regular function
     """Start the bot."""
     request = HTTPXRequest(
         connect_timeout=20.0,  # Increase the connection timeout (default is 5.0)
@@ -75,10 +76,13 @@ def main() -> None:
     application.add_handler(CommandHandler("initialize_database", create_tables))
     application.add_handler(CommandHandler("template_maker", template_maker))
 
-    # Initialize and start the scheduler
-    register_reminders_handlers(application)
+    # Get the current event loop
+    loop = asyncio.get_event_loop()
 
-    # Run the bot until you send a signal to the exit
+    # Run the reminder setup on the loop
+    loop.run_until_complete(register_reminders_handlers(application))
+
+    # Start the bot. This will block until the bot stops.
     application.run_polling()
 
 
