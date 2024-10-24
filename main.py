@@ -1,9 +1,10 @@
 import asyncio
 import logging
+import os
 from telegram import BotCommand
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler
 from telegram.request import HTTPXRequest
-from config import BOT_TOKEN
+from config import BOT_TOKEN, DATABASE_FILE
 
 from handlers.conversation.conversation_handler import (
     register_converstaion_handlers,
@@ -16,7 +17,7 @@ from handlers.personal_assistant_chat_handler import (
 )
 from handlers.help_support_handler import help_support_handler
 from templateMaker.template_maker_handler import template_maker
-from utils.database import create_tables
+from utils.database import create_tables, generate_question
 from utils.motivation.button_click_tracker import load_motivational_messages
 from utils.reminders import register_reminders_handlers
 
@@ -39,13 +40,21 @@ async def set_persistent_menu(application):
         BotCommand("clear_history", "مسح محادثة مساعد شخصي"),
         BotCommand("end_chat", "إنهاء المحادثة المساعد الشخصي"),
         BotCommand("initialize_database", "إنشاء جداول قاعدة البيانات"),
-        BotCommand("template_maker", "انشاء النماذج مع المجلدات"),
+        BotCommand("initialize_questions", "إنشاء الاسئلة"),
+        # BotCommand("template_maker", "انشاء النماذج مع المجلدات"),
     ]
     await application.bot.set_my_commands(commands)
 
 
 def main():  # Main is now a regular function
     """Start the bot."""
+
+    loop = asyncio.get_event_loop()
+    # Check if the database file exists
+    if not os.path.exists(DATABASE_FILE):
+        # Check if the directory exists, if not, create it
+        loop.run_until_complete(create_tables())
+
     request = HTTPXRequest(
         connect_timeout=20.0,  # Increase the connection timeout (default is 5.0)
         read_timeout=30.0,  # Increase the read timeout (default is 5.0)
@@ -74,10 +83,10 @@ def main():  # Main is now a regular function
 
     application.add_handler(CommandHandler("help_support", help_support_handler))
     application.add_handler(CommandHandler("initialize_database", create_tables))
-    application.add_handler(CommandHandler("template_maker", template_maker))
+    application.add_handler(CommandHandler("initialize_questions", generate_question))
+    # application.add_handler(CommandHandler("template_maker", template_maker))
 
     # Get the current event loop
-    loop = asyncio.get_event_loop()
 
     # Run the reminder setup on the loop
     loop.run_until_complete(register_reminders_handlers(application))

@@ -1,3 +1,4 @@
+import os
 import sqlite3
 
 from telegram import Update
@@ -20,8 +21,11 @@ def create_connection():
     return conn
 
 
-async def create_tables(update: Update, context: CallbackContext):
+async def create_tables(update: Update = None, context: CallbackContext = None):
     """Creates all the necessary tables in the database."""
+
+    os.makedirs(os.path.dirname(DATABASE_FILE), exist_ok=True)
+
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
 
@@ -222,10 +226,13 @@ async def create_tables(update: Update, context: CallbackContext):
         )
     """
     )
-    # await generate_questions_with_categories()
-    generate_verbal_questions()
     conn.commit()
     conn.close()
+
+
+def generate_question(update: Update = None, context: CallbackContext = None):
+    generate_questions_with_categories()
+    generate_verbal_questions()
 
 
 def get_data(query, params=None):

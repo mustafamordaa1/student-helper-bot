@@ -1,4 +1,6 @@
 venv/
+*.db
+*.pyc
 
 APIs/*.txt
 

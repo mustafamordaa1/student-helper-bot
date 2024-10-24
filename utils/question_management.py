@@ -82,21 +82,20 @@ def generate_verbal_questions():
         VERBAL_FILE,
         usecols=[
             "الجواب الصحيح",
-            "نص السؤال", 
+            "نص السؤال",
             "الخيار أ",
             "الخيار ب",
             "الخيار ج",
             "الخيار د",
             "الشرح",
-            "التصنيف الرئيسي",  
-            "القطعة" 
+            "التصنيف الرئيسي",
+            "القطعة",
         ],
     )
 
     for _, row in df.iterrows():
         main_category = row["التصنيف الرئيسي"]
         question_type = "verbal"
-        print(str(main_category).lower())
         if str(main_category).lower() == "nan":
             continue
         # Get the main category ID (create if it doesn't exist)
@@ -108,7 +107,7 @@ def generate_verbal_questions():
             "SELECT id FROM main_categories WHERE name = ?", (main_category,)
         )[0][0]
 
-        # Insert the verbal question 
+        # Insert the verbal question
         database.execute_query(
             """
             INSERT INTO questions (correct_answer, question_text, option_a, option_b, 
@@ -129,6 +128,7 @@ def generate_verbal_questions():
                 question_type,
             ),
         )
+
 
 def generate_questions():
     # Check if data already exists in the table
@@ -178,6 +178,7 @@ def get_random_questions(num_questions, question_type):
     )
     return questions
 
+
 def get_questions_by_category(category_id, num_questions, category_type, question_type):
     """Retrieves random questions of a specific type from the specified category.
 
@@ -189,7 +190,7 @@ def get_questions_by_category(category_id, num_questions, category_type, questio
     """
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
-    
+
     if category_type == "main_category_id":
         cursor.execute(
             """
@@ -212,19 +213,23 @@ def get_questions_by_category(category_id, num_questions, category_type, questio
             (category_id, question_type, num_questions),
         )
     else:
-        raise ValueError("Invalid category_type. Must be 'main_category_id' or 'sub_category_id'.")
+        raise ValueError(
+            "Invalid category_type. Must be 'main_category_id' or 'sub_category_id'."
+        )
 
     questions = cursor.fetchall()
     conn.close()
     return questions
 
+
 def connect_db():
     return sqlite3.connect(DATABASE_FILE)
+
 
 def get_random_question():
     with connect_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM questions ORDER BY RANDOM() LIMIT 1") 
+        cursor.execute("SELECT * FROM questions ORDER BY RANDOM() LIMIT 1")
         question_data = cursor.fetchone()
 
     if question_data:
@@ -232,6 +237,7 @@ def get_random_question():
         return dict(zip(column_names, question_data))
     else:
         return None
+
 
 def get_question_by_id(question_id):
     with connect_db() as conn:
@@ -245,14 +251,19 @@ def get_question_by_id(question_id):
     else:
         return None
 
+
 def update_learning_progress(user_id, question_id, answered_correctly):
     with connect_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
             INSERT INTO learning_progress (user_id, question_id, answered_correctly)
             VALUES (?, ?, ?)
-        ''', (user_id, question_id, answered_correctly))
+        """,
+            (user_id, question_id, answered_correctly),
+        )
         conn.commit()
+
 
 def format_question_for_chatgpt(question_data):
     return (
@@ -260,8 +271,9 @@ def format_question_for_chatgpt(question_data):
         f"A: {question_data['option_a']}\n"
         f"B: {question_data['option_b']}\n"
         f"C: {question_data['option_c']}\n"
-        f"D: {question_data['option_d']}\n" 
+        f"D: {question_data['option_d']}\n"
     )
+
 
 def format_question_for_user(question_data):
     return (
@@ -272,14 +284,18 @@ def format_question_for_user(question_data):
         f"د: {question_data['option_d']}"
     )
 
+
 def get_user_questions_for_review(user_id):
     """Retrieves questions the user has answered for review."""
     with connect_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT q.question_text, q.correct_answer, lp.answered_correctly
             FROM questions q
             JOIN learning_progress lp ON q.id = lp.question_id
             WHERE lp.user_id = ?
-        ''', (user_id,))
+        """,
+            (user_id,),
+        )
         return cursor.fetchall()
