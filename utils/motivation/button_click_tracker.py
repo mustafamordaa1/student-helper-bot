@@ -9,6 +9,7 @@ from config import (
     MALE_GO_BACK_MESSAGES_FILE,
     MALE_MAIN_MENU_MESSAGES_FILE,
 )
+from utils import user_management
 from utils.database import get_data
 
 # Constants for paths and message frequency
@@ -68,21 +69,20 @@ async def send_motivational_message(
     else:  # Assuming it's a CallbackQuery
         user = update.from_user
     user_id = user.id
-    user_data = context.user_data
-
     gender = get_data("SELECT gender FROM users WHERE telegram_id = ?", (user_id,))[0][
         0
     ]
 
     message = get_random_motivational_message(gender, called_from)
     if message:
-        username = user.username
+        # username = user.username
+        username = user_management.get_user_name(user_id)
         message = message.replace("(اسم المستخدم)", username)
         if isinstance(update, Update):
             await update.message.reply_text(message)
         else:
             await update.message.reply_text(message)
-    user_data["button_clicks"] = 0
+    context.user_data["button_clicks"] = 0
 
 
 async def track_button_clicks(update: Update, context: CallbackContext, called_from):
