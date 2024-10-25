@@ -8,7 +8,12 @@ from telegram.ext import (
 )
 
 from utils import user_management
-from utils.faq_management import get_faq_by_id, get_faq_categories, get_faqs_by_category
+from utils.faq_management import (
+    get_category_name_by_index,
+    get_faq_by_id,
+    get_faq_categories,
+    get_faqs_by_category,
+)
 from utils.subscription_management import check_subscription
 
 
@@ -300,9 +305,10 @@ async def handle_faq(update: Update, context: CallbackContext):
 
     # 2. Create buttons for each category
     keyboard = []
-    for category in categories:
+    for index, category in enumerate(categories):
+        # Use the row index as callback_data
         keyboard.append(
-            [InlineKeyboardButton(category, callback_data=f"faq_category_{category}")]
+            [InlineKeyboardButton(category, callback_data=f"faq_category_{index}")]
         )
 
     keyboard.append(
@@ -318,7 +324,10 @@ async def handle_faq(update: Update, context: CallbackContext):
 async def handle_faq_category(update: Update, context: CallbackContext):
     """Handles clicks on FAQ category buttons."""
     query = update.callback_query
-    selected_category = query.data.replace("faq_category_", "")
+    # Get the category index from callback_data
+    selected_category_index = int(query.data.replace("faq_category_", ""))
+
+    selected_category = get_category_name_by_index(selected_category_index)
 
     await query.answer("جاري جلب الأسئلة الشائعة لهذه الفئة... 🔄")
 

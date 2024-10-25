@@ -84,18 +84,6 @@ async def create_tables(update: Update = None, context: CallbackContext = None):
     """
     )
 
-    # FAQs Table
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS faqs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category TEXT NOT NULL,
-            question TEXT NOT NULL,
-            answer TEXT NOT NULL
-        )
-    """
-    )
-
     # Categorys Tables
     cursor.execute(
         """

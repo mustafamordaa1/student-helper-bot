@@ -22,7 +22,7 @@ async def help_support_handler(update: Update, context: CallbackContext):
     )
 
     user_context = context.user_data.get("current_section")  # Get user context
-    print(user_context)
+
     if user_context == "tests":
         initial_category = "أسئلة متعلقة بالاختبارات"
         await display_initial_message_and_support(update, context, initial_category)
@@ -66,14 +66,12 @@ async def display_initial_message_and_support(
 async def display_faq_categories(update: Update, context: CallbackContext):
     """Displays the main FAQ categories to the user."""
     categories = await get_faq_categories()
-
     keyboard = []
-    for category in categories:
+    for index, category in enumerate(categories):
+        # Use the row index as callback_data
         keyboard.append(
-            [InlineKeyboardButton(category, callback_data=f"faq_category_{category}")]
+            [InlineKeyboardButton(category, callback_data=f"faq_category_{index}")]
         )
-
-    # keyboard.append([InlineKeyboardButton("الرجوع للخلف", callback_data="go_back")])  # Go back to main menu
 
     await update.message.reply_text(
         "اختر فئة من الأسئلة الشائعة:", reply_markup=InlineKeyboardMarkup(keyboard)
