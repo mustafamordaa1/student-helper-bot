@@ -42,9 +42,13 @@ DATABASE_FILE = os.path.join(MAIN_FILES, "database.db")
 # Text files directory
 TEXT_FILES_DIRECTORY = os.path.join(MAIN_FILES, "Text Files")
 
+WELCOMING_MESSAGE = get_text_from_file(
+    os.path.join(TEXT_FILES_DIRECTORY, "رسالة الترحيب عند بدأ البوت.txt")
+)
 UNDER_DEVLOPING_MESSAGE = get_text_from_file(
     os.path.join(TEXT_FILES_DIRECTORY, "رسالة تحت التطوير.txt")
 )
+
 CONNECT_TELEGRAM_USERNAME = get_text_from_file(
     os.path.join(TEXT_FILES_DIRECTORY, "حساب للتواصل و الدعم.txt")
 )

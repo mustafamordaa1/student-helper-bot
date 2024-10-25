@@ -25,7 +25,7 @@ from .keyboards import (
     create_preference_keyboard,
 )
 from .material import send_material
-from config import WELCOMING_FOLDER
+from config import WELCOMING_FOLDER, WELCOMING_MESSAGE
 
 # Conversation states
 GENDER, NAME, CLASS, VOICE_WRITTEN, QIYAS, SCORE, PREFERENCE = range(7)
@@ -45,7 +45,7 @@ async def check_user_and_route(
         await update.message.reply_text(text_when_not_exist)
         keyboard = InlineKeyboardMarkup(create_gender_keyboard())
         await update.message.reply_text(
-            "أهلاً وسهلاً! يرجى اختيار جنسك:",
+            "يرجى اختيار جنسك:",
             reply_markup=keyboard,
         )
         return GENDER
@@ -53,16 +53,12 @@ async def check_user_and_route(
 
 async def start_conversation(update: Update, context: CallbackContext) -> int:
     """Handles the /start command and routes based on user existence."""
-    return await check_user_and_route(
-        update,
-        context,
-        "الرجاء ادخال معلوماتك:",
-    )
+    return await check_user_and_route(update, context, WELCOMING_MESSAGE)
 
 
 async def show_main_menu(update: Update, context: CallbackContext) -> int:
     """Handles the /main_menu command and routes based on user existence."""
-    return await check_user_and_route(update, context, "اعد ادخال معلوماتك:")
+    return await check_user_and_route(update, context, WELCOMING_MESSAGE)
 
 
 async def gender_handler(update: Update, context: CallbackContext) -> int:
