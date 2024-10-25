@@ -9,6 +9,7 @@ from telegram.ext import (
     CommandHandler,
     filters,
 )
+from config import UNDER_DEVLOPING_MESSAGE
 from handlers.main_menu_handler import main_menu_handler
 from main_menu_sections.tests.pdf_generator import generate_quiz_pdf
 from utils import database
@@ -89,6 +90,10 @@ async def handle_quiz_type_choice(update: Update, context: CallbackContext):
     await query.answer()
     _, quiz_type = query.data.split(":")
     context.user_data["quiz_type"] = quiz_type
+
+    if quiz_type == "quantitative":
+        await query.message.reply_text(UNDER_DEVLOPING_MESSAGE)
+        return  # Stop further processing for quantitative
 
     keyboard = []
     if quiz_type == "quantitative":  # Only show subcategories for Quantitative

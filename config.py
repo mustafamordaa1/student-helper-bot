@@ -1,15 +1,29 @@
 import os
 
 
+# Function to read text from a file
+def get_text_from_file(file_path):
+    """Reads text from a file and returns it."""
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            text = file.read()
+        return text
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return "حدث خطأ. الرجاء المحاولة مرة أخرى لاحقًا."
+
+
+# ----------------
+
 API_PATH = "APIs"
 
 # Bot token
 BOT_TOKEN_PATH = os.path.join(API_PATH, "bot_token.txt")
-BOT_TOKEN = open(BOT_TOKEN_PATH, "r", encoding="UTF-8").readline()
+BOT_TOKEN = get_text_from_file(BOT_TOKEN_PATH)
 
 # OpenAI key
 OPENAI_API_PATH = os.path.join(API_PATH, "openai.txt")
-OPENAI_API_KEY = open(OPENAI_API_PATH, "r", encoding="UTF-8").readline()
+OPENAI_API_KEY = get_text_from_file(OPENAI_API_PATH)
 
 # ----------------
 # Main files directory
@@ -23,6 +37,17 @@ IMAGE_FOLDER = "Images"
 # Path to Database File
 DATABASE_FILE = os.path.join(MAIN_FILES, "database.db")
 
+
+# ----------------
+# Text files directory
+TEXT_FILES_DIRECTORY = os.path.join(MAIN_FILES, "Text Files")
+
+UNDER_DEVLOPING_MESSAGE = get_text_from_file(
+    os.path.join(TEXT_FILES_DIRECTORY, "رسالة تحت التطوير.txt")
+)
+CONNECT_TELEGRAM_USERNAME = get_text_from_file(
+    os.path.join(TEXT_FILES_DIRECTORY, "حساب للتواصل و الدعم.txt")
+)
 
 # ----------------
 # Excel files directory

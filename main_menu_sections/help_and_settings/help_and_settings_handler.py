@@ -7,6 +7,7 @@ from telegram.ext import (
     CallbackContext,
 )
 
+from config import CONNECT_TELEGRAM_USERNAME
 from utils import user_management
 from utils.faq_management import (
     get_category_name_by_index,
@@ -380,11 +381,7 @@ async def handle_support_contact(update: Update, context: CallbackContext):
     # Create the keyboard with the button
     keyboard = InlineKeyboardMarkup(
         [
-            [
-                InlineKeyboardButton(
-                    "تواصل مع الدعم 🤝", url="https://t.me/Rejectionism"
-                )
-            ],
+            [InlineKeyboardButton("تواصل مع الدعم 🤝", url=CONNECT_TELEGRAM_USERNAME)],
             [
                 InlineKeyboardButton(
                     "الرجوع للخلف 🔙", callback_data="help_and_settings"

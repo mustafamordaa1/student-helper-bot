@@ -1,5 +1,6 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackContext
+from config import CONNECT_TELEGRAM_USERNAME
 from utils.faq_management import get_faq_categories, get_faqs_by_category
 from utils.subscription_management import check_subscription
 
@@ -12,7 +13,7 @@ async def help_support_handler(update: Update, context: CallbackContext):
 
     # Add the support account button
     support_button = InlineKeyboardButton(
-        "تواصل مع الدعم", url="https://t.me/Rejectionism"
+        "تواصل مع الدعم", url=CONNECT_TELEGRAM_USERNAME
     )
     keyboard = InlineKeyboardMarkup([[support_button]])
 

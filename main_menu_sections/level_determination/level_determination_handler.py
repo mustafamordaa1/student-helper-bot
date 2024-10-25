@@ -11,6 +11,7 @@ from telegram.ext import (
     filters,
     CommandHandler,
 )
+from config import UNDER_DEVLOPING_MESSAGE
 from handlers.main_menu_handler import main_menu_handler
 from handlers.personal_assistant_chat_handler import chatgpt, SYSTEM_MESSAGE
 from main_menu_sections.level_determination.pdf_generator import generate_quiz_pdf
@@ -81,6 +82,10 @@ async def handle_quiz_type_choice(update: Update, context: CallbackContext):
     await query.answer()
     _, quiz_type = query.data.split(":")
     context.user_data["level_quiz_type"] = quiz_type
+
+    if quiz_type == "quantitative":
+        await query.message.reply_text(UNDER_DEVLOPING_MESSAGE)
+        return  # Stop further processing for quantitative
 
     # Proceed to the input type selection:
     keyboard = [
