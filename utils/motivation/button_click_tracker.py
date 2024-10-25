@@ -1,4 +1,3 @@
-import os
 import random
 from openpyxl import load_workbook
 from telegram import Update
@@ -22,7 +21,7 @@ motivational_messages = {
 }
 
 
-def load_motivational_messages():
+async def load_motivational_messages():
     """Loads motivational messages from Excel files into the global dictionary."""
 
     def load_messages_from_file(filepath):

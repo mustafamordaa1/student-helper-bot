@@ -16,7 +16,6 @@ from handlers.personal_assistant_chat_handler import (
     personal_assistant_handler,
 )
 from handlers.help_support_handler import help_support_handler
-from templateMaker.template_maker_handler import template_maker
 from utils.database import create_tables, generate_question
 from utils.motivation.button_click_tracker import load_motivational_messages
 from utils.reminders import register_reminders_handlers
@@ -41,18 +40,15 @@ async def set_persistent_menu(application):
         BotCommand("end_chat", "إنهاء المحادثة المساعد الشخصي"),
         BotCommand("initialize_database", "إنشاء جداول قاعدة البيانات"),
         BotCommand("initialize_questions", "إنشاء الاسئلة"),
-        # BotCommand("template_maker", "انشاء النماذج مع المجلدات"),
     ]
     await application.bot.set_my_commands(commands)
 
 
-def main():  # Main is now a regular function
+def main():
     """Start the bot."""
-
     loop = asyncio.get_event_loop()
     # Check if the database file exists
     if not os.path.exists(DATABASE_FILE):
-        # Check if the directory exists, if not, create it
         loop.run_until_complete(create_tables())
 
     request = HTTPXRequest(
@@ -68,7 +64,7 @@ def main():  # Main is now a regular function
         .build()
     )
 
-    load_motivational_messages()
+    loop.run_until_complete(load_motivational_messages())
 
     # Add conversation handler
     register_converstaion_handlers(application)
@@ -78,21 +74,16 @@ def main():  # Main is now a regular function
     register_all_main_menu_handlers(application)
     application.add_handler(CallbackQueryHandler(handle_main_menu_option))
 
-    # Add personal assistant handler
     application.add_handler(personal_assistant_handler)
-
     application.add_handler(CommandHandler("help_support", help_support_handler))
     application.add_handler(CommandHandler("initialize_database", create_tables))
     application.add_handler(CommandHandler("initialize_questions", generate_question))
-    # application.add_handler(CommandHandler("template_maker", template_maker))
-
-    # Get the current event loop
 
     # Run the reminder setup on the loop
     loop.run_until_complete(register_reminders_handlers(application))
 
     # Start the bot. This will block until the bot stops.
-    application.run_polling()
+    application.run_polling(poll_interval=2, timeout=15)
 
 
 if __name__ == "__main__":
