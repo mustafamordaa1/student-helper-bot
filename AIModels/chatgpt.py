@@ -32,23 +32,24 @@ class ChatGPT:
         save_history: bool = True,
         use_response_mode: bool = True,
         return_as_text: bool = False,
-        **kwargs,  # Passing extra parameters to generate_response
+        **kwargs,  # Additional parameters for generate_response
     ) -> Optional[str]:
         """
-        Centralized function to handle chatting with the assistant.
+        Handle chatting with the assistant.
 
         Args:
-            user_id: The ID of the user.
-            user_message: The user's message.
-            update: The Telegram Update.
-            context: The Telegram CallbackContext.
-            system_message: An optional system message to set the assistant's behavior.
-            save_history: Whether to save the chat history to the database.
-            use_response_mode: The desired response mode ("text" or "voice").
+            user_id (int): The ID of the user.
+            user_message (str): The user's message.
+            update (Update, optional): The Telegram Update. Default is None.
+            context (CallbackContext, optional): The Telegram CallbackContext. Default is None.
+            system_message (str, optional): An optional system message to set the assistant's behavior. Default is "".
+            save_history (bool, optional): Whether to save the chat history to the database. Default is True.
+            use_response_mode (bool, optional): The desired response mode ("text" or "voice"). Default is True.
+            return_as_text (bool, optional): Whether to return the response as text. Default is False.
             **kwargs: Additional keyword arguments to pass to the OpenAI API.
 
         Returns:
-            The assistant's response (text or audio file path), or None if an error occurred.
+            Optional[str]: The assistant's response (text or audio file path), or None if an error occurred.
         """
         if not return_as_text:
             if not await self.check_usage_limit(user_id):
