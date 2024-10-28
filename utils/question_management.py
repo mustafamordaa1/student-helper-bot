@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import pandas as pd
 
@@ -112,8 +113,8 @@ def generate_verbal_questions():
             """
             INSERT INTO questions (correct_answer, question_text, option_a, option_b, 
                                     option_c, option_d, explanation, main_category_id, 
-                                    image_path, question_type)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    image_path, question_type, passage_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 str(row["الجواب الصحيح"]),
@@ -124,10 +125,21 @@ def generate_verbal_questions():
                 str(row["الخيار د"]),
                 str(row["الشرح"]),
                 main_category_id,
-                str(row["القطعة"]),
+                None,
                 question_type,
+                str(row["القطعة"]),
             ),
         )
+
+
+def get_passage_content(context_folder, passage_name):
+    """Fetches the passage content based on the passage_name."""
+    if passage_name and passage_name != "N/A":
+        file_path = os.path.join(context_folder, f"{passage_name}.txt")
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as file:
+                return file.read().strip()
+    return ""
 
 
 def generate_questions():
@@ -167,6 +179,7 @@ def generate_questions():
 
 def get_random_questions(num_questions, question_type):
     """Retrieves a specified number of random questions from the database."""
+    # Step 1: Retrieve a random set of questions
     questions = database.get_data(
         """
         SELECT * FROM questions 
@@ -176,7 +189,11 @@ def get_random_questions(num_questions, question_type):
         """,
         (question_type, num_questions),
     )
-    return questions
+    # Step 2: Group questions by passage name
+    grouped_questions = sorted(
+        questions, key=lambda x: x[11]
+    )  # Sort by passage_name index
+    return grouped_questions
 
 
 def get_questions_by_category(category_id, num_questions, category_type, question_type):

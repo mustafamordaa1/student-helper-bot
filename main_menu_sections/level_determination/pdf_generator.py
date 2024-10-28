@@ -7,15 +7,18 @@ from datetime import datetime
 from config import Q_AND_A_FILE_PATH
 from utils import database
 
+
 def replace_placeholders_in_word(output_path, data):
     """Replaces placeholders in the Word document."""
     doc = DocxTemplate(Q_AND_A_FILE_PATH)
     doc.render(data)
     doc.save(output_path)
 
+
 def convert_docx_to_pdf(docx_path, pdf_path):
     """Converts a .docx file to a .pdf file."""
     convert(docx_path, pdf_path)
+
 
 def merge_pdfs(pdf_list, output_pdf):
     """Merges multiple PDFs into a single PDF file."""
@@ -24,6 +27,7 @@ def merge_pdfs(pdf_list, output_pdf):
         merger.append(pdf)
     merger.write(output_pdf)
     merger.close()
+
 
 def cleanup_files(files):
     """Deletes the specified files from the filesystem."""
@@ -58,31 +62,39 @@ def generate_quiz_pdf(questions, user_id):
             main_category_id,
             question_type,
             image_path,
+            passage_name,
+            *_,
         ) = question_data
         main_category_name = database.get_data(
             "SELECT name FROM main_categories WHERE id = ?", (main_category_id,)
         )
 
-        quiz_data.append({
-            "QuestionNumber": i + 1,
-            "QuestionText": question_text,
-            "MainCategoryName": main_category_name[0][0],
-            "OptionA": option_a,
-            "OptionB": option_b,
-            "OptionC": option_c,
-            "OptionD": option_d,
-            "CorrectAnswer": correct_answer,
-            "Explanation": explanation,
-        })
+        quiz_data.append(
+            {
+                "QuestionNumber": i + 1,
+                "QuestionText": question_text,
+                "MainCategoryName": main_category_name[0][0],
+                "OptionA": option_a,
+                "OptionB": option_b,
+                "OptionC": option_c,
+                "OptionD": option_d,
+                "CorrectAnswer": correct_answer,
+                "Explanation": explanation,
+            }
+        )
 
     # 3. Generate the entire quiz Word document
-    word_filename = os.path.join(user_dir, f"quiz_{datetime.now().strftime('%Y%m%d%H%M%S')}.docx")
+    word_filename = os.path.join(
+        user_dir, f"quiz_{datetime.now().strftime('%Y%m%d%H%M%S')}.docx"
+    )
     doc = DocxTemplate(Q_AND_A_FILE_PATH)
     doc.render({"questions": quiz_data})  # Pass the list of question data
     doc.save(word_filename)
 
     # 4. Convert the Word document to PDF
-    pdf_filename = os.path.join(user_dir, f"quiz_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf")
+    pdf_filename = os.path.join(
+        user_dir, f"quiz_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    )
     convert(word_filename, pdf_filename)
 
     # 5. Cleanup the temporary Word file (optional)
@@ -90,6 +102,7 @@ def generate_quiz_pdf(questions, user_id):
     #     os.remove(word_filename)
 
     return pdf_filename
+
 
 # def generate_quiz_pdf(questions, user_id):
 #     """
@@ -177,9 +190,9 @@ def generate_quiz_pdf(questions, user_id):
 
 #     Args:
 #         questions (list): A list of tuples, each containing question data:
-#                           (question_id, question_text, option_a, option_b, 
+#                           (question_id, question_text, option_a, option_b,
 #                            option_c, option_d, explanation (optional)).
-#         filename (str, optional): The name of the output PDF file. 
+#         filename (str, optional): The name of the output PDF file.
 #                                    Defaults to "quiz.pdf".
 #     """
 
@@ -212,26 +225,26 @@ def generate_quiz_pdf(questions, user_id):
 
 #         # Question Number and Text
 #         question_num = i + 1
-#         question_text = f"**{question_num}. {question_text}**" 
+#         question_text = f"**{question_num}. {question_text}**"
 #         story.append(Paragraph(question_text, question_style))
 
-#         # Options 
+#         # Options
 #         story.append(Paragraph(f"A. {option_a}", option_style))
 #         story.append(Paragraph(f"B. {option_b}", option_style))
 #         story.append(Paragraph(f"C. {option_c}", option_style))
 #         story.append(Paragraph(f"D. {option_d}", option_style))
 
 #         # Add space for answer (or modify to create fillable forms)
-#         story.append(Spacer(1, 0.5*inch)) 
+#         story.append(Spacer(1, 0.5*inch))
 
 #         # Optional: Add explanation (if provided)
 #         if explanation:
 #             explanation_text = explanation[0] # Assuming explanation is the 7th element in tuple
 #             story.append(Paragraph(f"Explanation: {explanation_text}", styles["Italic"]))
-#             story.append(Spacer(1, 0.3*inch)) 
+#             story.append(Spacer(1, 0.3*inch))
 
 #         # Add page break after each question (or every few questions)
-#         story.append(PageBreak()) 
+#         story.append(PageBreak())
 
 #     doc.build(story)
 

@@ -11,7 +11,7 @@ from telegram.ext import (
     filters,
     CommandHandler,
 )
-from config import UNDER_DEVLOPING_MESSAGE
+from config import CONTEXT_DIRECTORY, UNDER_DEVLOPING_MESSAGE
 from handlers.main_menu_handler import main_menu_handler
 from handlers.personal_assistant_chat_handler import chatgpt, SYSTEM_MESSAGE
 from main_menu_sections.level_determination.pdf_generator import generate_quiz_pdf
@@ -20,7 +20,7 @@ from utils.database import (
     get_data,
     execute_query_return_id,
 )
-from utils.question_management import get_random_questions
+from utils.question_management import get_passage_content, get_random_questions
 from utils.subscription_management import check_subscription
 from utils.user_management import (
     calculate_percentage_expected,
@@ -233,9 +233,20 @@ async def send_question(update: Update, context: CallbackContext):
             option_b,
             option_c,
             option_d,
-            *_,
+            explanation,
+            main_category_id,
+            question_type,
+            image_path,
+            passage_name,
         ) = question_data
 
+        passage_content = ""
+        if not passage_name == "-":
+            passage_content = get_passage_content(CONTEXT_DIRECTORY, passage_name)
+
+        passage_text = ""
+        if passage_content:
+            passage_text = f"النص: {passage_content}\n\n"
         answer_options = [
             (f"أ. {option_a}", f"answer_{question_id}_أ"),
             (f"ب. {option_b}", f"answer_{question_id}_ب"),
@@ -255,15 +266,13 @@ async def send_question(update: Update, context: CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         if current_question_index == 0:
             await update.effective_message.reply_text(
-                f"*{current_question_index+1}.* {question_text}",
+                f"{passage_text}" f"{current_question_index+1}. {question_text}",
                 reply_markup=reply_markup,
-                parse_mode="Markdown",
             )
         else:
             await update.effective_message.edit_text(
-                f"*{current_question_index+1}.* {question_text}",
+                f"{passage_text}" f"{current_question_index+1}. {question_text}",
                 reply_markup=reply_markup,
-                parse_mode="Markdown",
             )
     else:
         await end_quiz(update, context)
@@ -426,11 +435,12 @@ async def end_quiz(update: Update, context: CallbackContext):
     )
 
     await message.edit_text(
-        f"انتهت الأسئلة! 🎉\n"
-        f"لقد ربحت {points_earned} نقطة! 🏆\n"
-        f"لقد حصلت على {score} من {total_questions} 👏\n"
-        f"لقد استغرقت {int(total_time // 60)} دقيقة و{int(total_time % 60)} ثانية. ⏱️\n"
-        f"إليك بعض الملاحظات حول مستواك وطرق التحسين:\n{feedback_text}"
+        f"*انتهت الأسئلة!* 🎉\n"
+        f"لقد ربحت *{points_earned}* نقطة! 🏆\n"
+        f"لقد حصلت على *{score}* من *{total_questions}* 👏\n"
+        f"لقد استغرقت *{int(total_time // 60)}* دقيقة و*{int(total_time % 60)}* ثانية. ⏱️\n"
+        f"*إليك بعض الملاحظات حول مستواك وطرق التحسين:*\n{feedback_text}",
+        parse_mode="Markdown",
     )
 
     await update.effective_message.reply_text("انتظر قليلا جاري إنشاء ملف pdf... 📄")

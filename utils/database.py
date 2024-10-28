@@ -128,9 +128,10 @@ async def create_tables(update: Update = None, context: CallbackContext = None):
             option_c TEXT,
             option_d TEXT,
             explanation TEXT,
-            main_category_id INTEGER, 
-            question_type TEXT DEFAULT 'quantitative', 
+            main_category_id INTEGER,
+            question_type TEXT DEFAULT 'quantitative',
             image_path TEXT,
+            passage_name TEXT,
             FOREIGN KEY (main_category_id) REFERENCES main_categories(id) ON DELETE CASCADE
         )
     """
