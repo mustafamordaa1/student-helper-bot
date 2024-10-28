@@ -1,7 +1,11 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import logging
 from datetime import datetime, timedelta
+import os
 import random
 from typing import Dict, List
+
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     CallbackContext,
@@ -11,10 +15,13 @@ from telegram.ext import (
     filters,
     CommandHandler,
 )
+
 from config import CONTEXT_DIRECTORY, UNDER_DEVLOPING_MESSAGE
 from handlers.main_menu_handler import main_menu_handler
 from handlers.personal_assistant_chat_handler import chatgpt, SYSTEM_MESSAGE
-from main_menu_sections.level_determination.pdf_generator import generate_quiz_pdf
+from main_menu_sections.level_determination.pdf_generator import (
+    generate_quiz_pdf,
+)
 from utils.database import (
     execute_query,
     get_data,
@@ -30,6 +37,10 @@ from utils.user_management import (
     update_user_points,
     update_user_usage_time,
 )
+import pythoncom
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # States for the conversation
 (
@@ -40,6 +51,11 @@ from utils.user_management import (
     ANSWER_QUESTIONS,
 ) = range(5)
 CHATTING = 0
+
+
+executor = ThreadPoolExecutor(
+    max_workers=2, initializer=pythoncom.CoInitialize
+)
 
 
 async def handle_level_determination(update: Update, context: CallbackContext):
@@ -80,32 +96,43 @@ async def handle_quiz_type_choice(update: Update, context: CallbackContext):
     """Handles the choice of quiz type."""
     query = update.callback_query
     await query.answer()
-    _, quiz_type = query.data.split(":")
-    context.user_data["level_quiz_type"] = quiz_type
+    try:
+        _, quiz_type = query.data.split(":")
+        context.user_data["level_quiz_type"] = quiz_type
 
-    if quiz_type == "quantitative":
-        await query.message.reply_text(UNDER_DEVLOPING_MESSAGE)
-        return  # Stop further processing for quantitative
+        if quiz_type == "quantitative":
+            await query.message.reply_text(UNDER_DEVLOPING_MESSAGE)
+            return  # Stop further processing for quantitative
 
-    # Proceed to the input type selection:
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "عددًا معينًا من الأسئلة 🔢", callback_data="number_of_questions"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "عن طريق اختبار بمدة زمنية محددة ⏱️", callback_data="time_limit"
-            )
-        ],
-        [InlineKeyboardButton("الرجوع للخلف 🔙", callback_data="test_current_level")],
-    ]
-    await update.callback_query.edit_message_text(
-        "هل تريدنا أن نحدد مستواك عن طريق سؤالك عددًا معينًا من الأسئلة، أم عن طريق إعطائك اختبارا بمدة زمنية معينة؟ 🤔",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
-    return CHOOSE_INPUT_TYPE
+        # Proceed to the input type selection:
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "عددًا معينًا من الأسئلة 🔢", callback_data="number_of_questions"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "عن طريق اختبار بمدة زمنية محددة ⏱️", callback_data="time_limit"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "الرجوع للخلف 🔙", callback_data="test_current_level"
+                )
+            ],
+        ]
+        await update.callback_query.edit_message_text(
+            "هل تريدنا أن نحدد مستواك عن طريق سؤالك عددًا معينًا من الأسئلة، أم عن طريق إعطائك اختبارا بمدة زمنية معينة؟ 🤔",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+        return CHOOSE_INPUT_TYPE
+    except Exception as e:
+        logger.error(f"Error in handle_quiz_type_choice: {e}")
+        await query.message.reply_text(
+            "حدث خطأ أثناء اختيار نوع الاختبار. يرجى المحاولة مرة أخرى. ⚠️"
+        )
+        return ConversationHandler.END
 
 
 async def handle_number_of_questions_choice(update: Update, context: CallbackContext):
@@ -126,7 +153,7 @@ async def handle_number_of_questions_input(update: Update, context: CallbackCont
     """Handles the user input for the number of questions."""
     try:
         num_questions = int(update.message.text)
-        if num_questions < 1 or num_questions > 100:
+        if not 10 <= num_questions <= 100:
             await update.message.reply_text("الرجاء إدخال عدد أسئلة بين 10 و 100. ⚠️")
             return GET_NUMBER_OF_QUESTIONS
 
@@ -141,7 +168,7 @@ async def handle_number_of_questions_input(update: Update, context: CallbackCont
         await update.message.reply_text("الرجاء إدخال عدد صحيح. 🔢")
         return GET_NUMBER_OF_QUESTIONS
     except Exception as e:
-        print(f"Error in input handler: {e}")
+        logger.error(f"Error in handle_number_of_questions_input: {e}")
         await update.message.reply_text("حدث خطأ، يرجى المحاولة مرة أخرى. ⚠️")
         return GET_NUMBER_OF_QUESTIONS
 
@@ -164,7 +191,7 @@ async def handle_time_limit_input(update: Update, context: CallbackContext):
         await update.message.reply_text("الرجاء إدخال عدد صحيح. 🔢")
         return GET_TIME_LIMIT
     except Exception as e:
-        print(f"Error in input handler: {e}")
+        logger.error(f"Error in handle_time_limit_input: {e}")
         await update.message.reply_text("حدث خطأ، يرجى المحاولة مرة أخرى. ⚠️")
         return GET_TIME_LIMIT
 
@@ -174,29 +201,39 @@ async def start_quiz(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     num_questions = context.user_data["num_questions"]
     question_type = context.user_data["level_quiz_type"]
-    # await update.message.reply_text("جاري اختيار الأسئلة... 📚")
 
-    questions = get_random_questions(num_questions, question_type)
+    try:
+        questions = get_random_questions(num_questions, question_type)
+    except Exception as e:
+        logger.error(f"Error in getting questions: {e}")
+        await update.message.reply_text(
+            "حدث خطأ أثناء تحميل الأسئلة. يرجى المحاولة مرة أخرى. ⚠️"
+        )
+        return ConversationHandler.END
+
     context.user_data["questions"] = questions
     context.user_data["current_question"] = 0
     context.user_data["score"] = 0
     context.user_data["start_time"] = datetime.now()
-
-    # Initialize the answers list
     context.user_data["answers"] = []
-    context.user_data["results"] = []  # To keep track of whether the answer was correct
+    context.user_data["results"] = []
 
-    timestamp = datetime.now()
-
-    level_determination_id = execute_query_return_id(
-        """
-        INSERT INTO level_determinations (user_id, timestamp, num_questions, percentage, time_taken, pdf_path)
-        VALUES (?, ?, ?, 0, 0, '')
-        """,
-        (user_id, timestamp, num_questions),
-    )
-
-    context.user_data["level_determination_id"] = level_determination_id
+    try:
+        timestamp = datetime.now()
+        level_determination_id = execute_query_return_id(
+            """
+            INSERT INTO level_determinations (user_id, timestamp, num_questions, percentage, time_taken, pdf_path)
+            VALUES (?, ?, ?, 0, 0, '')
+            """,
+            (user_id, timestamp, num_questions),
+        )
+        context.user_data["level_determination_id"] = level_determination_id
+    except Exception as e:
+        logger.error(f"Error in database insertion: {e}")
+        await update.message.reply_text(
+            "حدث خطأ أثناء بدء الاختبار. يرجى المحاولة مرة أخرى. ⚠️"
+        )
+        return ConversationHandler.END
 
     await update.message.reply_text(
         "سيتم تقييم مستواك من خلال هذه الأسئلة. 📝\n"
@@ -241,12 +278,10 @@ async def send_question(update: Update, context: CallbackContext):
         ) = question_data
 
         passage_content = ""
-        if not passage_name == "-":
+        if passage_name != "-":
             passage_content = get_passage_content(CONTEXT_DIRECTORY, passage_name)
 
-        passage_text = ""
-        if passage_content:
-            passage_text = f"النص: {passage_content}\n\n"
+        passage_text = f"النص: {passage_content}\n\n" if passage_content else ""
         answer_options = [
             (f"أ. {option_a}", f"answer_{question_id}_أ"),
             (f"ب. {option_b}", f"answer_{question_id}_ب"),
@@ -292,8 +327,17 @@ async def handle_answer(update: Update, context: CallbackContext):
 
     query = update.callback_query
     user_id = update.effective_user.id
-    _, question_id, user_answer = query.data.split("_")
-    question_id = int(question_id)
+
+    try:
+        _, question_id, user_answer = query.data.split("_")
+        question_id = int(question_id)
+    except Exception as e:
+        logger.error(f"Error in parsing answer data: {e}")
+        await query.answer(
+            text="حدث خطأ أثناء معالجة إجابتك. يرجى المحاولة مرة أخرى. ⚠️",
+            show_alert=True,
+        )
+        return
 
     questions = context.user_data["questions"]
     current_question_index = context.user_data["current_question"]
@@ -310,14 +354,18 @@ async def handle_answer(update: Update, context: CallbackContext):
     is_correct = user_answer.upper() == correct_answer.upper()
 
     # Store the user's answer and whether it was correct
-    context.user_data["answers"].append(user_answer)  # Store user's answer
-    context.user_data["results"].append(is_correct)  # Store correctness
+    context.user_data["answers"].append(user_answer)
+    context.user_data["results"].append(is_correct)
 
     level_determination_id = context.user_data["level_determination_id"]
 
-    record_user_answer(
-        user_id, question_id, user_answer, is_correct, level_determination_id
-    )
+    try:
+        record_user_answer(
+            user_id, question_id, user_answer, is_correct, level_determination_id
+        )
+    except Exception as e:
+        logger.error(f"Error in recording user answer: {e}")
+        # Decide whether to continue or halt the quiz based on the severity
 
     if is_correct:
         context.user_data["score"] += 1
@@ -349,27 +397,28 @@ def record_user_answer(
     user_id, question_id, user_answer, is_correct, level_determination_id
 ):
     """Records the user's answer in the database, linked to the level determination."""
-    execute_query(
-        """
-        INSERT INTO level_determination_answers (user_id, question_id, user_answer, is_correct, level_determination_id)
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (user_id, question_id, user_answer, is_correct, level_determination_id),
-    )
+    try:
+        execute_query(
+            """
+            INSERT INTO level_determination_answers (user_id, question_id, user_answer, is_correct, level_determination_id)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, question_id, user_answer, is_correct, level_determination_id),
+        )
+    except Exception as e:
+        logger.error(f"Error recording user answer to database: {e}")
+        # Handle the exception, potentially retrying the operation or notifying the user
 
 
 def get_option_text(question_data, correct_answer):
     """Helper function to get the text of the correct option."""
-    if correct_answer == "أ":
-        return question_data[3]
-    elif correct_answer == "ب":
-        return question_data[4]
-    elif correct_answer == "ج":
-        return question_data[5]
-    elif correct_answer == "د":
-        return question_data[6]
-    else:
-        return "غير محدد"
+    option_mapping = {
+        "أ": question_data[3],
+        "ب": question_data[4],
+        "ج": question_data[5],
+        "د": question_data[6],
+    }
+    return option_mapping.get(correct_answer, "غير محدد")
 
 
 async def end_quiz(update: Update, context: CallbackContext):
@@ -445,23 +494,48 @@ async def end_quiz(update: Update, context: CallbackContext):
 
     await update.effective_message.reply_text("انتظر قليلا جاري إنشاء ملف pdf... 📄")
 
-    pdf_filepath = generate_quiz_pdf(questions, user_id)
+    def generate_pdf_wrapper(questions, user_id):
+        try:
+            return generate_quiz_pdf(questions, user_id)
+        except Exception as e:
+            logger.error(f"Error generating PDF: {e}")
+            return None
+
+    loop = asyncio.get_running_loop()  # Get the event loop
+    pdf_filepath = await loop.run_in_executor(
+        executor, generate_pdf_wrapper, questions, user_id
+    )
+
+    if pdf_filepath is None:  # Check if PDF generation failed
+        await update.effective_message.reply_text("حدث خطأ أثناء إنشاء ملف PDF. ⚠️")
+        return ConversationHandler.END  # Important: end the conversation here
 
     level_determination_id = context.user_data["level_determination_id"]
     percentage = calculate_percentage_expected(score, total_questions)
 
-    execute_query(
-        """
-        UPDATE level_determinations
-        SET percentage = ?, time_taken = ?, pdf_path = ?
-        WHERE id = ?
-        """,
-        (percentage, total_time, pdf_filepath, level_determination_id),
-    )
+    try:
+        execute_query(
+            """
+            UPDATE level_determinations
+            SET percentage = ?, time_taken = ?, pdf_path = ?
+            WHERE id = ?
+            """,
+            (percentage, total_time, pdf_filepath, level_determination_id),
+        )
+    except Exception as e:
+        logger.error(f"Error updating level determination in database: {e}")
+        # Handle the error, e.g., log and potentially inform the user
 
-    with open(pdf_filepath, "rb") as f:
-        await context.bot.send_document(chat_id=update.effective_chat.id, document=f)
-
+    # Check if pdf_filepath is valid before trying to open it
+    if pdf_filepath and os.path.exists(pdf_filepath):
+        with open(pdf_filepath, "rb") as f:
+            await context.bot.send_document(
+                chat_id=update.effective_chat.id, document=f
+            )
+    else:
+        logger.error("PDF file path is None or file does not exist.")
+        await update.effective_message.reply_text("تعذر العثور على ملف PDF. ⚠️")
+        return
     return ConversationHandler.END
 
 
@@ -473,11 +547,15 @@ async def get_question_category_and_type(question_id: int):
     JOIN main_categories ON questions.main_category_id = main_categories.id
     WHERE questions.id = ?
     """
-    result = await asyncio.to_thread(get_data, query, (question_id,))
-    if result:
-        category_name, question_type = result[0]
-        return category_name, question_type
-    return "Unknown", "Unknown"
+    try:
+        result = await asyncio.to_thread(get_data, query, (question_id,))
+        if result:
+            category_name, question_type = result[0]
+            return category_name, question_type
+        return "Unknown", "Unknown"
+    except Exception as e:
+        logger.error(f"Error fetching question details: {e}")
+        return "Unknown", "Unknown"
 
 
 async def generate_feedback_with_chatgpt(
@@ -512,22 +590,25 @@ async def generate_feedback_with_chatgpt(
             f"Was it correct? {'Yes' if q['is_correct'] else 'No'}\n\n"
         )
 
-    feedback_text = await chatgpt.chat_with_assistant(
-        user_id=user_id,
-        user_message=user_message,
-        system_message=system_message,
-        save_history=False,  # Not saving history for this feedback
-        update=update,
-        context=context,
-        use_response_mode=False,
-        return_as_text=True,
-    )
-
-    return (
-        feedback_text
-        if feedback_text
-        else "Sorry, I couldn't process your request at the moment."
-    )
+    try:
+        feedback_text = await chatgpt.chat_with_assistant(
+            user_id=user_id,
+            user_message=user_message,
+            system_message=system_message,
+            save_history=False,
+            update=update,
+            context=context,
+            use_response_mode=False,
+            return_as_text=True,
+        )
+        return (
+            feedback_text
+            if feedback_text
+            else "عذرا، لا يمكنني معالجة طلبك في الوقت الحالي."
+        )
+    except Exception as e:
+        logger.error(f"Error generating feedback with ChatGPT: {e}")
+        return "حدث خطأ أثناء الحصول على تحليل الأداء. ⚠️"
 
 
 async def handle_final_step(update: Update, context: CallbackContext):
@@ -570,21 +651,24 @@ async def handle_ai_assistance_yes(update: Update, context: CallbackContext):
 
 async def chat(update: Update, context: CallbackContext) -> int:
     user_message = update.message.text
+    user_id = update.effective_user.id
+    try:
+        assistant_response = await chatgpt.chat_with_assistant(
+            user_id, user_message, update, context, system_message=SYSTEM_MESSAGE
+        )
 
-    assistant_response = await chatgpt.chat_with_assistant(
-        update.effective_user.id,
-        user_message,
-        update,
-        context,
-        system_message=SYSTEM_MESSAGE,
-    )
+        if assistant_response == -1:
+            return ConversationHandler.END
 
-    if assistant_response == -1:
-        return ConversationHandler.END
-
-    if assistant_response:
-        return CHATTING
-    else:
+        if assistant_response:
+            return CHATTING
+        else:
+            await update.message.reply_text(
+                "حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى لاحقًا. ⚠️"
+            )
+            return ConversationHandler.END
+    except Exception as e:
+        logger.error(f"Error in chat with user {user_id}: {e}")
         await update.message.reply_text(
             "حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى لاحقًا. ⚠️"
         )
@@ -602,9 +686,16 @@ async def track_progress(update: Update, context: CallbackContext):
     """Tracks the user's progress in level determination."""
     user_id = update.effective_user.id
 
-    level_determinations = get_data(
-        "SELECT * FROM level_determinations WHERE user_id = ?", (user_id,)
-    )
+    try:
+        level_determinations = get_data(
+            "SELECT * FROM level_determinations WHERE user_id = ?", (user_id,)
+        )
+    except Exception as e:
+        logger.error(f"Error retrieving level determinations: {e}")
+        await update.callback_query.message.reply_text(
+            "حدث خطأ أثناء جلب بيانات التقدم. ⚠️"
+        )
+        return
 
     if not level_determinations:
         await update.callback_query.message.reply_text(
@@ -633,18 +724,29 @@ async def track_progress(update: Update, context: CallbackContext):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.callback_query.edit_message_text(
-        "اختر الاختبار لعرض تفاصيله: 🔍", reply_markup=reply_markup
+        "اختر الاختبار تحديد المستوى لعرض تفاصيله: 🔍", reply_markup=reply_markup
     )
 
 
 async def show_level_details(update: Update, context: CallbackContext):
     """Shows details of a specific level determination test."""
     query = update.callback_query
-    level_determination_id = int(query.data.split("_")[-1])
+    try:
+        level_determination_id = int(query.data.split("_")[-1])
+    except ValueError as e:
+        logger.error(f"Error extracting level_determination_id: {e}")
+        await query.message.reply_text("حدث خطأ أثناء عرض تفاصيل الاختبار. ⚠️")
+        return
 
-    level_determination = get_data(
-        "SELECT * FROM level_determinations WHERE id = ?", (level_determination_id,)
-    )
+    try:
+        level_determination = get_data(
+            "SELECT * FROM level_determinations WHERE id = ?",
+            (level_determination_id,),
+        )
+    except Exception as e:
+        logger.error(f"Error fetching level determination details: {e}")
+        await query.message.reply_text("حدث خطأ أثناء جلب بيانات الاختبار. ⚠️")
+        return
 
     if not level_determination:
         await query.message.reply_text("لم يتم العثور على هذا الاختبار. ⚠️")
@@ -686,18 +788,34 @@ async def show_level_details(update: Update, context: CallbackContext):
 async def download_pdf(update: Update, context: CallbackContext):
     """Downloads the PDF file for the level determination test."""
     query = update.callback_query
-    _, _, level_determination_id = query.data.split("_")
-    level_determination_id = int(level_determination_id)
+    try:
+        _, _, level_determination_id = query.data.split("_")
+        level_determination_id = int(level_determination_id)
+    except Exception as e:
+        logger.error(f"Error extracting level_determination_id: {e}")
+        await query.message.reply_text("حدث خطأ أثناء تحميل ملف PDF. ⚠️")
+        return
 
-    result = get_data(
-        "SELECT pdf_path FROM level_determinations WHERE id = ?",
-        (level_determination_id,),
-    )
+    try:
+        result = get_data(
+            "SELECT pdf_path FROM level_determinations WHERE id = ?",
+            (level_determination_id,),
+        )
+    except Exception as e:
+        logger.error(f"Error fetching PDF path: {e}")
+        await query.message.reply_text("حدث خطأ أثناء جلب ملف PDF. ⚠️")
+        return
 
     if result:
         pdf_path = result[0][0]
-        with open(pdf_path, "rb") as f:
-            await context.bot.send_document(chat_id=query.message.chat_id, document=f)
+        try:
+            with open(pdf_path, "rb") as f:
+                await context.bot.send_document(
+                    chat_id=query.message.chat_id, document=f
+                )
+        except Exception as e:
+            logger.error(f"Error sending PDF: {e}")
+            await query.message.reply_text("حدث خطأ أثناء إرسال ملف PDF. ⚠️")
     else:
         await query.message.reply_text("لم يتم العثور على ملف PDF لهذا الاختبار. ⚠️")
 
@@ -718,11 +836,7 @@ level_conv_ai_assistance_handler = ConversationHandler(
     entry_points=[
         CallbackQueryHandler(handle_ai_assistance_yes, pattern="^ai_assistance_yes$")
     ],
-    states={
-        CHATTING: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, chat),
-        ],
-    },
+    states={CHATTING: [MessageHandler(filters.TEXT & ~filters.COMMAND, chat)]},
     fallbacks=[CommandHandler("end_chat", end_chat)],
 )
 
@@ -732,7 +846,7 @@ level_conv_handler = ConversationHandler(
         CallbackQueryHandler(handle_test_current_level, pattern="^test_current_level$")
     ],
     states={
-        CHOOSE_QUIZ_TYPE: [  # Add the new state here
+        CHOOSE_QUIZ_TYPE: [
             CallbackQueryHandler(
                 handle_quiz_type_choice, pattern="^level_quiz_type:.+$"
             )
@@ -756,5 +870,6 @@ level_conv_handler = ConversationHandler(
     fallbacks=[
         CallbackQueryHandler(handle_ai_assistance_no, pattern="^ai_assistance_no$"),
         CallbackQueryHandler(handle_test_current_level, pattern="^test_current_level$"),
+        CommandHandler("end_quiz", end_quiz),
     ],
 )
