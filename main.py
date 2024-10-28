@@ -16,7 +16,7 @@ from handlers.personal_assistant_chat_handler import (
     personal_assistant_handler,
 )
 from handlers.help_support_handler import help_support_handler
-from utils.database import create_tables, generate_question
+from utils.database import create_tables
 from utils.motivation.button_click_tracker import load_motivational_messages
 from utils.question_management import generate_verbal_questions
 from utils.reminders import register_reminders_handlers
@@ -37,10 +37,8 @@ async def set_persistent_menu(application):
         BotCommand("main_menu", "القائمة الرئيسية"),
         BotCommand("help_support", "المساعدة والدعم"),
         BotCommand("personal_assistant_chat", "محادثة المساعد الشخصي"),
-        BotCommand("clear_history", "مسح محادثة مساعد شخصي"),
         BotCommand("end_chat", "إنهاء المحادثة المساعد الشخصي"),
-        BotCommand("initialize_database", "إنشاء جداول قاعدة البيانات"),
-        BotCommand("initialize_questions", "إنشاء الاسئلة"),
+        BotCommand("clear_history", "مسح ذاكرة محادثة مساعد شخصي"),
     ]
     await application.bot.set_my_commands(commands)
 
@@ -78,8 +76,6 @@ def main():
 
     application.add_handler(personal_assistant_handler)
     application.add_handler(CommandHandler("help_support", help_support_handler))
-    application.add_handler(CommandHandler("initialize_database", create_tables))
-    application.add_handler(CommandHandler("initialize_questions", generate_question))
 
     # Run the reminder setup on the loop
     loop.run_until_complete(register_reminders_handlers(application))
