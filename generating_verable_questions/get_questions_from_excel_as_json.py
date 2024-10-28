@@ -4,11 +4,26 @@ import json
 import os
 
 from AIModels.chatgpt import get_chatgpt_instance
-from config import VERBAL_FILE
+from config import CONTEXT_DIRECTORY, VERBAL_FILE
 
 
-def prepare_fine_tuning_data(excel_file):
-    """Reads the Excel file and formats data for fine-tuning to match question structure."""
+def read_context_from_folder(folder_path, context_name):
+    """
+    Reads context from a text file in the specified folder if the file matches the context name.
+    Returns the context content if found; otherwise, returns 'N/A'.
+    """
+    context_file_path = os.path.join(folder_path, f"{context_name}.txt")
+    if os.path.isfile(context_file_path):
+        with open(context_file_path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    return "N/A"
+
+
+def prepare_fine_tuning_data(excel_file, context_folder):
+    """
+    Reads the Excel file and formats data for fine-tuning to create unique questions in each given category,
+    checking for context in specified folder based on column data.
+    """
     try:
         df = pd.read_excel(excel_file)
         fine_tuning_data = []
@@ -17,30 +32,30 @@ def prepare_fine_tuning_data(excel_file):
             # Extract row data, removing any extra prefixes for clean output
             if not pd.notna(row["القطعة"]):
                 continue
+            main_category = row["التصنيف الرئيسي"]
             question_text = row["نص السؤال"]
             option_a = row["الخيار أ"]
             option_b = row["الخيار ب"]
             option_c = row["الخيار ج"]
             option_d = row["الخيار د"]
             explanation = row["الشرح"]
-            main_category = row["التصنيف الرئيسي"]
             correct_answer = row["الجواب الصحيح"]
-            passage = row["القطعة"] if pd.notna(row["القطعة"]) else "N/A"
+            context_name = row["القطعة"] if pd.notna(row["القطعة"]) else "N/A"
 
-            # Construct prompt and answer pairs that simulate the exact output format you want
+            # Retrieve the actual context content if a context name is provided
+            passage_context = read_context_from_folder(context_folder, context_name)
+
+            # Example-based prompt for generating a unique question
             prompt = f"""
-            Category: {main_category}
-            Passage/Context: {passage}
-            Question: {question_text}
-            Options:
-            A) {option_a}
-            B) {option_b}
-            C) {option_c}
-            D) {option_d}
-            Note: Generate a similar question with distinct text and new answer options within the same category.
+            Create a unique Arabic question in the '{main_category}' category for the context '{context_name}'.
+            Context details: {passage_context}
+            - Provide four answer options (A, B, C, D) with one correct answer.
+            - Format the response in JSON format to match the following structure.
+            - Include the correct answer and an explanation in Arabic.
             """
 
-            answer = {
+            # Define example answer structure to model output format
+            example_answer = {
                 "نص السؤال": question_text,
                 "الخيار أ": option_a,
                 "الخيار ب": option_b,
@@ -49,26 +64,26 @@ def prepare_fine_tuning_data(excel_file):
                 "الشرح": explanation,
                 "التصنيف الرئيسي": main_category,
                 "الجواب الصحيح": correct_answer,
-                "القطعة": passage,
+                "القطعة": context_name,
             }
 
-            # Format the data for fine-tuning in structured format
+            # Prepare the fine-tuning input, with roles for system, user, and assistant
             fine_tuning_example = {
                 "messages": [
                     {
                         "role": "system",
-                        "content": "Generate unique questions with varied answer options for Arabic verbal reasoning tests, matching the structure of each field as given.",
+                        "content": "You are a question generator for Arabic verbal reasoning tests, tasked with creating unique questions per specified category.",
                     },
                     {"role": "user", "content": prompt},
                     {
                         "role": "assistant",
-                        "content": json.dumps(answer, ensure_ascii=False),
+                        "content": json.dumps(example_answer, ensure_ascii=False),
                     },
                 ]
             }
             fine_tuning_data.append(fine_tuning_example)
 
-        # Save the fine-tuning data to a JSONL file
+        # Save formatted fine-tuning data to JSONL file
         with open(
             "fine_tuning_data_verbal_questions.jsonl", "w", encoding="utf-8"
         ) as f:
@@ -77,7 +92,7 @@ def prepare_fine_tuning_data(excel_file):
                 f.write("\n")  # New line for JSONL format
 
         print("Fine-tuning data saved to fine_tuning_data_verbal_questions.jsonl")
-        return "fine_tuning_data.jsonl"
+        return "fine_tuning_data_verbal_questions.jsonl"
 
     except FileNotFoundError:
         print(f"Error: File {excel_file} not found.")
@@ -181,6 +196,7 @@ async def generate_custom_questions_by_category(
     category: str,
     passage: str,
     chatgpt_instance,
+    context_folder,
     num_questions: int = 1,
     file_path="custom_questions_by_category.xlsx",
     **kwargs,
@@ -188,21 +204,21 @@ async def generate_custom_questions_by_category(
     """Generates unique questions within a specified category using the fine-tuned model."""
     new_questions = []
 
+    # Retrieve the actual context content if a context name is provided
+    passage_context = read_context_from_folder(context_folder, passage)
+
     for _ in range(num_questions):
         # Prepare the prompt for ChatGPT
         prompt = f"""
-        Generate {num_questions} unique questions within the category "{category}" based on the following context.
-        Passage/Context: {passage}
+        Generate {num_questions} unique questions within the category "{category}" based on the following context '{passage}'..
+        Passage/Context: {passage_context}
         Create new answer options, a distinct question text, and ensure all answer choices are varied and relevant.
         Include correct answer and explanation in Arabic.
-
-        The output should look like JSON format like here, just in curly braces in the values, nothing more:
-        "نص السؤال": "برتقال:ليمون", "الخيار أ": "قمح:شعير", "الخيار ب": "شاي:زنجبيل", "الخيار ج": "خس:موز", "الخيار د": "فراولة جرجير", "الشرح": "العلاقة: فئات", "التصنيف الرئيسي": "التناظر اللفظي", "الجواب الصحيح": "أ", "القطعة": "-"
 
         And if there is more than one question provide all questions in a structured JSON format as a list of objects.
         """
 
-        system_message = "You are an assistant that generates varied Arabic verbal reasoning questions."
+        system_message = "You are a question generator for Arabic verbal reasoning tests, tasked with creating unique questions per specified category."
 
         # Request ChatGPT to generate a unique question
         assistant_response = await chatgpt_instance.generate_response(
@@ -246,11 +262,15 @@ async def generate_custom_questions_by_category(
     return file_path
 
 
-def generate_verbel_questions():
+def generate_fine_tuning_data():
+    excel_file = VERBAL_FILE  # Replace with your file's path
+    jsonl_file = prepare_fine_tuning_data(excel_file, CONTEXT_DIRECTORY)
+
+
+def generate_verbel_questions_with_excel_data():
     loop = asyncio.get_event_loop()
 
     excel_file = VERBAL_FILE  # Replace with your file's path
-    # jsonl_file = prepare_fine_tuning_data(excel_file)
 
     chatgpt = get_chatgpt_instance()
 
@@ -271,30 +291,41 @@ def generate_verbel_questions():
                 temperature=0.7,
                 max_tokens=500,
             )
-        )  # Generates 5 similar questions per row
+        )
 
         if new_excel_file:
             print(f"New questions (test run) saved to {new_excel_file}")
 
-        # Generate custom questions for a specific category
-        # category = "التناظر اللفظي"  # For example
-        # passage = "-"  # Replace with specific context if needed
-        # num_questions = 2  # Number of unique questions to generate
-
-        # new_excel_file = loop.run_until_complete(
-        #     generate_custom_questions_by_category(
-        #         category,
-        #         passage,
-        #         chatgpt,
-        #         num_questions,
-        #         temperature=0.7,
-        #         max_tokens=500,
-        #     )
-        # )
-
-        # print(f"Generated questions saved to {new_excel_file}")
-
     except FileNotFoundError:
         print(f"Error: File {excel_file} not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+def generate_verbel_questions_with_category():
+    loop = asyncio.get_event_loop()
+
+    chatgpt = get_chatgpt_instance()
+
+    try:
+        # Generate custom questions for a specific category
+        category = "التناظر اللفظي"
+        passage = "-"  # Replace with specific context if needed
+        num_questions = 2  # Number of unique questions to generate
+
+        new_excel_file = loop.run_until_complete(
+            generate_custom_questions_by_category(
+                category,
+                passage,
+                chatgpt,
+                CONTEXT_DIRECTORY,
+                num_questions,
+                temperature=0.7,
+                max_tokens=500,
+            )
+        )
+
+        print(f"Generated questions saved to {new_excel_file}")
+
     except Exception as e:
         print(f"An error occurred: {e}")

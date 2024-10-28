@@ -60,9 +60,15 @@ EXCEL_FILES_DIRECTORY = os.path.join(MAIN_FILES, "Excel Files")
 # Excel files
 EXCEL_FILE_BASHAR = os.path.join(EXCEL_FILES_DIRECTORY, "الاسئلة الكمية.xlsx")
 REMINDER_FILE = os.path.join(EXCEL_FILES_DIRECTORY, "reminders.xlsx")
-VERBAL_FILE = os.path.join(EXCEL_FILES_DIRECTORY, "الاسئلة اللفظية.xlsx")
 FAQ_FILE = os.path.join(EXCEL_FILES_DIRECTORY, "الاسئلة الشائعة.xlsx")
 
+
+# ----------------
+# Verbel files directory
+VERBEL_FILES_DIRECTORY = os.path.join(MAIN_FILES, "Verbel Files")
+VERBAL_FILE = os.path.join(VERBEL_FILES_DIRECTORY, "الاسئلة اللفظية.xlsx")
+
+CONTEXT_DIRECTORY = os.path.join(VERBEL_FILES_DIRECTORY, "Context")
 
 # ----------------
 # Rewards Files directory
