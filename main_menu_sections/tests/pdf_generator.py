@@ -18,7 +18,6 @@ def generate_quiz_pdf(questions, user_id, category_name=None):
     """
     try:
         # 1. Create the directory structure
-        print("calling test")
         base_dir = "user_tests"
         user_dir = os.path.join(base_dir, str(user_id))
         os.makedirs(user_dir, exist_ok=True)  # Create if it doesn't exist

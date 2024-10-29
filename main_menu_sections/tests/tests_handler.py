@@ -711,7 +711,6 @@ async def end_quiz(update: Update, context: CallbackContext):
 
         if pdf_filepath is None:  # Check if PDF generation failed
             await update.effective_message.reply_text("حدث خطأ أثناء إنشاء ملف PDF. ⚠️")
-            return ConversationHandler.END  # Important: end the conversation here
 
         try:
             # Update the previous_tests entry using database function
@@ -736,6 +735,7 @@ async def end_quiz(update: Update, context: CallbackContext):
         else:
             logger.error("PDF file path is None or file does not exist.")
             await update.effective_message.reply_text("تعذر العثور على ملف PDF. ⚠️")
+
         return ConversationHandler.END
     except Exception as e:
         logger.error(f"Error in end_quiz: {e}")
