@@ -337,7 +337,7 @@ async def handle_answer(update: Update, context: CallbackContext):
             text="حدث خطأ أثناء معالجة إجابتك. يرجى المحاولة مرة أخرى. ⚠️",
             show_alert=True,
         )
-        return
+
 
     questions = context.user_data["questions"]
     current_question_index = context.user_data["current_question"]
@@ -431,6 +431,8 @@ async def end_quiz(update: Update, context: CallbackContext):
     questions = context.user_data["questions"]
     user_id = update.effective_user.id
 
+    level_determination_id = context.user_data["level_determination_id"]
+
     if (
         "end_time" in context.user_data
         and datetime.now() > context.user_data["end_time"]
@@ -448,6 +450,8 @@ async def end_quiz(update: Update, context: CallbackContext):
     update_user_percentage_expected(user_id, percentage_expected)
     points_earned = calculate_points(total_time, score, total_questions)
     update_user_points(user_id, points_earned)
+
+    percentage = calculate_percentage_expected(score, total_questions)
 
     # Prepare data for analysis
     quiz_data = []
@@ -508,10 +512,6 @@ async def end_quiz(update: Update, context: CallbackContext):
 
     if pdf_filepath is None:  # Check if PDF generation failed
         await update.effective_message.reply_text("حدث خطأ أثناء إنشاء ملف PDF. ⚠️")
-        return ConversationHandler.END  # Important: end the conversation here
-
-    level_determination_id = context.user_data["level_determination_id"]
-    percentage = calculate_percentage_expected(score, total_questions)
 
     try:
         execute_query(
@@ -535,7 +535,7 @@ async def end_quiz(update: Update, context: CallbackContext):
     else:
         logger.error("PDF file path is None or file does not exist.")
         await update.effective_message.reply_text("تعذر العثور على ملف PDF. ⚠️")
-        return
+
     return ConversationHandler.END
 
 
