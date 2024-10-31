@@ -1,6 +1,7 @@
 import logging
 from docxtpl import DocxTemplate
 from docx2pdf import convert
+import subprocess
 import os
 from datetime import datetime
 
@@ -106,3 +107,21 @@ def convert_to_pdf(word_file, pdf_file):
     except Exception as e:
         logger.error(f"Error converting to PDF: {e}")
         raise
+
+def convert_to_pdf_using_libreoffice(word_file, pdf_file):
+    # Set output path if not specified
+    if pdf_file is None:
+        pdf_file = os.path.splitext(word_file)[0] + ".pdf"
+    
+    # Run the LibreOffice command to convert to PDF
+    result = subprocess.run([
+        "libreoffice", "--headless", "--convert-to", "pdf", "--outdir",
+        os.path.dirname(pdf_file), word_file
+    ], check=True)
+    
+    # Check if the file was created successfully
+    if os.path.exists(pdf_file):
+        print(f"Conversion successful: {pdf_file}")
+        return pdf_file
+    else:
+        raise FileNotFoundError("PDF conversion failed.")
